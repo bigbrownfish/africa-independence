@@ -227,7 +227,7 @@ function resolveGeoId(properties) {
     return null;
 }
 
-d3.json("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson").then(world => {
+d3.json("ne_110m_admin_0_countries.geojson").then(world => {
     
     // Фильтруем данные
     const africa = world.features.filter(d => resolveGeoId(d.properties) !== null);
@@ -288,4 +288,5 @@ window.addEventListener('resize', () => {
 });
 </script>
 </body>
+
 </html>
