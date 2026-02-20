@@ -33,7 +33,6 @@
         .tooltip-title { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #2c3e50; }
         .tooltip-row { margin-bottom: 3px; }
 
-        /* Обновленные стили легенды с зоной захвата */
         #legend {
             position: absolute;
             bottom: 20px;
@@ -48,6 +47,8 @@
             box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
             z-index: 5;
             width: 200px;
+            /* Включаем аппаратное ускорение для плавности */
+            will-change: left, top;
         }
         
         #legend-drag-handle {
@@ -60,14 +61,13 @@
             border-radius: 6px 6px 0 0;
             padding: 8px;
             user-select: none;
-            touch-action: none; /* Важно для мобильных устройств */
+            touch-action: none;
         }
         #legend-drag-handle:active { cursor: grabbing; background: #d0d0d0; }
         
         #legend-content {
             padding: 10px;
             overflow-y: auto;
-            /* Обеспечивает плавную прокрутку на iOS/Android */
             -webkit-overflow-scrolling: touch; 
         }
 
@@ -181,40 +181,54 @@ const mixedItem = legendContainer.append("div").attr("class", "legend-item").sty
 mixedItem.append("div").attr("class", "legend-pattern");
 mixedItem.append("div").style("font-style", "italic").style("font-size", "11px").text("Штриховка: Несколько метрополий");
 
-// Логика перетаскивания легенды
-const dragHandler = d3.drag()
-    .on("drag", function(event) {
-        const legendEl = document.getElementById("legend");
-        
-        // Получаем текущие координаты (отвязываемся от bottom)
-        let currentTop = parseFloat(legendEl.style.top);
-        let currentLeft = parseFloat(legendEl.style.left);
-        
-        if (isNaN(currentTop)) {
-            const rect = legendEl.getBoundingClientRect();
-            currentTop = rect.top;
-            currentLeft = rect.left;
-            legendEl.style.bottom = "auto"; // Убираем жесткую привязку к низу
-        }
+// --- ПЛАВНОЕ ПЕРЕТАСКИВАНИЕ НА POINTER EVENTS ---
+const legendEl = document.getElementById("legend");
+const dragHandle = document.getElementById("legend-drag-handle");
+let isDragging = false;
+let startX, startY, initialLeft, initialTop;
 
-        // Вычисляем новую позицию, не давая утащить за края экрана
-        let newX = currentLeft + event.dx;
-        let newY = currentTop + event.dy;
-        
-        // Ограничители (чтобы не потерять легенду)
-        newX = Math.max(0, Math.min(window.innerWidth - legendEl.offsetWidth, newX));
-        newY = Math.max(0, Math.min(window.innerHeight - legendEl.offsetHeight, newY));
+dragHandle.addEventListener("pointerdown", (e) => {
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    
+    // Фиксируем координаты (сбрасываем bottom)
+    const rect = legendEl.getBoundingClientRect();
+    legendEl.style.bottom = "auto";
+    legendEl.style.right = "auto";
+    initialLeft = rect.left;
+    initialTop = rect.top;
+    legendEl.style.left = initialLeft + "px";
+    legendEl.style.top = initialTop + "px";
+    
+    dragHandle.setPointerCapture(e.pointerId); // Удерживаем фокус на перетаскивании
+});
 
-        legendEl.style.left = newX + "px";
-        legendEl.style.top = newY + "px";
-    });
+dragHandle.addEventListener("pointermove", (e) => {
+    if (!isDragging) return;
+    
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    
+    let newX = initialLeft + dx;
+    let newY = initialTop + dy;
+    
+    // Границы экрана
+    newX = Math.max(0, Math.min(window.innerWidth - legendEl.offsetWidth, newX));
+    newY = Math.max(0, Math.min(window.innerHeight - legendEl.offsetHeight, newY));
 
-d3.select("#legend-drag-handle").call(dragHandler);
+    legendEl.style.left = newX + "px";
+    legendEl.style.top = newY + "px";
+});
 
-// Подготовка SVG и группы для зума
+dragHandle.addEventListener("pointerup", (e) => {
+    isDragging = false;
+    dragHandle.releasePointerCapture(e.pointerId);
+});
+// --------------------------------------------------
+
 const svg = d3.select("#map-container");
 const defs = svg.append("defs");
-// Создаем "контейнер" внутри SVG, который мы будем масштабировать и двигать
 const mapGroup = svg.append("g"); 
 
 function getFillStyle(metros, id) {
@@ -243,15 +257,12 @@ const projection = d3.geoMercator();
 const path = d3.geoPath().projection(projection);
 const tooltip = d3.select("#tooltip");
 
-// Скрытие подсказки при клике на пустую область
 svg.on("click", function(event) {
     if (event.target.tagName === "svg") hideTooltip();
 });
 
 function showTooltip(event, info) {
     tooltip.transition().duration(200).style("opacity", .95);
-    
-    // Поддержка касаний: если это touch-событие, берем его координаты
     let pointerEvent = event;
     if (event.touches && event.touches.length > 0) pointerEvent = event.touches[0];
 
@@ -289,35 +300,25 @@ function resolveGeoId(properties) {
     return null;
 }
 
-// Добавляем логику зума (приближения)
 const zoom = d3.zoom()
-    .scaleExtent([1, 8]) // От начального размера (1x) до 8-кратного увеличения
+    .scaleExtent([1, 8]) 
     .on("zoom", function(event) {
-        // Применяем математическую трансформацию ко всей группе карты
         mapGroup.attr("transform", event.transform);
-        
-        // Утончаем обводки границ, чтобы при приближении они не выглядели жирными
         mapGroup.selectAll(".country").style("stroke-width", 0.5 / event.transform.k + "px");
         mapGroup.selectAll(".island-marker").style("stroke-width", 1 / event.transform.k + "px");
-        
-        // Оставляем размер шрифта годов читаемым, но не гигантским
         mapGroup.selectAll("text").style("font-size", (8 / Math.max(1, event.transform.k * 0.5)) + "px");
-        
-        // Скрываем подсказку при скролле карты
         hideTooltip();
     });
 
-// Прикрепляем зум к основному SVG
 svg.call(zoom);
 
-d3.json("ne_110m_admin_0_countries.geojson").then(world => {
+// Загружаем карту с параметром, чтобы обойти жесткое кэширование внутри скрипта
+d3.json("ne_110m_admin_0_countries.geojson?v=2").then(world => {
     
     const africa = world.features.filter(d => resolveGeoId(d.properties) !== null);
     
-    // Оставляем отступы по краям, чтобы было удобнее начинать свайп
     projection.fitExtent([[30, 30], [window.innerWidth - 30, window.innerHeight - 30]], {type: "FeatureCollection", features: africa});
 
-    // Рисуем в mapGroup вместо svg
     mapGroup.selectAll("path")
         .data(africa)
         .enter().append("path")
@@ -328,7 +329,7 @@ d3.json("ne_110m_admin_0_countries.geojson").then(world => {
             return getFillStyle(countryData[geoId].metro, geoId);
         })
         .on("click", (event, d) => {
-            event.stopPropagation(); // Предотвращаем сброс клика
+            event.stopPropagation(); 
             showTooltip(event, countryData[resolveGeoId(d.properties)]);
         });
 
@@ -368,7 +369,6 @@ d3.json("ne_110m_admin_0_countries.geojson").then(world => {
 
 window.addEventListener('resize', () => {
     svg.attr("width", window.innerWidth).attr("height", window.innerHeight);
-    // Опционально: можно вызывать сброс зума при повороте экрана телефона
 });
 </script>
 </body>
