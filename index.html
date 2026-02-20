@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Независимость стран Африки</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #e0f7fa; font-family: sans-serif; overflow: hidden; }
+        #map-container { width: 100vw; height: 100vh; }
+        
+        .country { stroke: #333; stroke-width: 0.5px; transition: opacity 0.2s, stroke-width 0.2s; cursor: pointer; }
+        .country:hover { opacity: 0.7; stroke-width: 1.5px; }
+        .island-marker { stroke: #333; stroke-width: 1px; cursor: pointer; transition: opacity 0.2s, r 0.2s; }
+        .island-marker:hover { opacity: 0.7; r: 10px; }
+        
+        .year-label { font-size: 8px; font-weight: bold; fill: #000; text-anchor: middle; pointer-events: none; text-shadow: 1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white; }
+        .island-label { font-size: 8px; font-weight: bold; fill: #000; text-anchor: start; pointer-events: none; text-shadow: 1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white; }
+        
+        #tooltip {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #333;
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none;
+            opacity: 0;
+            font-size: 14px;
+            box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+            max-width: 250px;
+            z-index: 10;
+        }
+        .tooltip-title { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #2c3e50; }
+        .tooltip-row { margin-bottom: 3px; }
+
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #999;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            max-height: 40vh;
+            overflow-y: auto;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
+            z-index: 5;
+        }
+        .legend-title { font-weight: bold; margin-bottom: 8px; font-size: 13px; text-align: center; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
+        .legend-color { width: 16px; height: 16px; margin-right: 8px; border: 1px solid #666; border-radius: 2px; }
+        .legend-pattern { width: 16px; height: 16px; margin-right: 8px; border: 1px solid #666; border-radius: 2px; background: repeating-linear-gradient(45deg, #ccc, #ccc 4px, #fff 4px, #fff 8px); }
+    </style>
+</head>
+<body>
+
+<div id="tooltip"></div>
+
+<div id="legend">
+    <div class="legend-title">Бывшие метрополии</div>
+    <div id="legend-items"></div>
+</div>
+
+<svg id="map-container"></svg>
+
+<script>
+const metropoleColors = {
+    "Франция": "#4287f5",
+    "Великобритания": "#f54242",
+    "Испания": "#f5d142",
+    "Италия": "#9e42f5",
+    "Португалия": "#42f563",
+    "Германия": "#f58742",
+    "Бельгия": "#8b5a2b",
+    "США": "#ff99cc",
+    "Нидерланды": "#42d4f5",
+    "ЮАР": "#808080",
+    "Египет": "#1a1a1a",
+    "Судан": "#b30000",
+    "Дания": "#ffd700",
+    "Швеция": "#a1caf1",
+    "Никогда не была колонизирована": "#ffffff"
+};
+
+const countryData = {
+    "ESH": { name: "Западная Сахара", capital: "Эль-Аюн, Тифарити", metro: ["Испания"], metro_text: "Испания (до 1976)", year: "1976" },
+    "MAR": { name: "Марокко", capital: "Рабат", metro: ["Франция", "Испания"], metro_text: "Франция (1912-1956), Испания (1912-1956)", year: "1956" },
+    "DZA": { name: "Алжир", capital: "Алжир", metro: ["Франция"], metro_text: "Франция (1830-1962)", year: "1962" },
+    "LBY": { name: "Ливия", capital: "Триполи", metro: ["Италия", "Великобритания", "Франция"], metro_text: "Италия (1911-1947), Великобритания (1947-1951), Франция (1947-1951)", year: "1951" },
+    "EGY": { name: "Египет", capital: "Каир", metro: ["Великобритания"], metro_text: "Великобритания (1882-1922)", year: "1922" },
+    "TUN": { name: "Тунис", capital: "Тунис", metro: ["Франция"], metro_text: "Франция (1881-1956)", year: "1956" },
+    "SDN": { name: "Судан", capital: "Хартум", metro: ["Великобритания", "Египет"], metro_text: "Великобритания (1899-1956), Египет (1899-1956)", year: "1956" },
+    "MRT": { name: "Мавритания", capital: "Нуакшот", metro: ["Франция"], metro_text: "Франция (1814-1960)", year: "1960" },
+    "SEN": { name: "Сенегал", capital: "Дакар", metro: ["Франция"], metro_text: "Франция (1634-1960)", year: "1960" },
+    "GMB": { name: "Гамбия", capital: "Банжул", metro: ["Великобритания"], metro_text: "Великобритания (1661-1965)", year: "1965" },
+    "GNB": { name: "Гвинея-Бисау", capital: "Бисау", metro: ["Португалия"], metro_text: "Португалия (до 1974/1975)", year: "1973/1974" },
+    "GIN": { name: "Гвинея", capital: "Конакри", metro: ["Франция"], metro_text: "Франция (1898-1958)", year: "1958" },
+    "SLE": { name: "Сьерра-Леоне", capital: "Фритаун", metro: ["Великобритания"], metro_text: "Великобритания (1787-1961)", year: "1961" },
+    "LBR": { name: "Либерия", capital: "Монровия", metro: ["США"], metro_text: "США (1822-1847)", year: "1847" },
+    "CIV": { name: "Кот-д’Ивуар", capital: "Ямусукро", metro: ["Франция"], metro_text: "Франция (1845-1960)", year: "1960" },
+    "GHA": { name: "Гана", capital: "Аккра", metro: ["Великобритания", "Дания", "Швеция"], metro_text: "Великобритания (до 1957), Дания (до 1850), Швеция (до 1657)", year: "1957" },
+    "TGO": { name: "Того", capital: "Ломе", metro: ["Германия", "Франция"], metro_text: "Германия (1884-1914), Франция (1916-1960)", year: "1960" },
+    "BEN": { name: "Бенин", capital: "Порто-Ново", metro: ["Франция"], metro_text: "Франция (1894-1960)", year: "1960" },
+    "NGA": { name: "Нигерия", capital: "Абуджа", metro: ["Великобритания"], metro_text: "Великобритания (1861-1960)", year: "1960" },
+    "NER": { name: "Нигер", capital: "Ниамей", metro: ["Франция"], metro_text: "Франция (до 1960)", year: "1960" },
+    "BFA": { name: "Буркина-Фасо", capital: "Уагадугу", metro: ["Франция"], metro_text: "Франция (до 1960)", year: "1960" },
+    "MLI": { name: "Мали", capital: "Бамако", metro: ["Франция"], metro_text: "Франция (1880-1960)", year: "1960" },
+    "TCD": { name: "Чад", capital: "Нджамена", metro: ["Франция"], metro_text: "Франция (1900-1960)", year: "1960" },
+    "CMR": { name: "Камерун", capital: "Яунде", metro: ["Германия", "Франция", "Великобритания"], metro_text: "Германия (1884-1916), Франция (1916-1960), Великобритания (1916-1961)", year: "1960" },
+    "GNQ": { name: "Экваториальная Гвинея", capital: "Сьюдад-де-ла-Пас", metro: ["Испания"], metro_text: "Испания (1858-1968)", year: "1968" },
+    "GAB": { name: "Габон", capital: "Либревиль", metro: ["Франция"], metro_text: "Франция (1839-1960)", year: "1960" },
+    "COG": { name: "Республика Конго", capital: "Браззавиль", metro: ["Франция"], metro_text: "Франция (1880-1960)", year: "1960" },
+    "AGO": { name: "Ангола", capital: "Луанда", metro: ["Португалия"], metro_text: "Португалия (1575-1975)", year: "1975" },
+    "COD": { name: "Дем. Республика Конго", capital: "Киншаса", metro: ["Бельгия"], metro_text: "Бельгия (1885/1908-1960)", year: "1960" },
+    "CAF": { name: "Центральноафриканская Республика", capital: "Банги", metro: ["Франция"], metro_text: "Франция (до 1960)", year: "1960" },
+    "SSD": { name: "Южный Судан", capital: "Джуба", metro: ["Великобритания", "Судан"], metro_text: "Великобритания (1899-1956), Судан (1956-2011)", year: "2011" },
+    "ETH": { name: "Эфиопия", capital: "Аддис-Абеба", metro: ["Никогда не была колонизирована"], metro_text: "Никогда не была колонизирована (Италия 1936-1941)", year: "Древнее гос-во" },
+    "ERI": { name: "Эритрея", capital: "Асмэра", metro: ["Италия", "Великобритания", "Эфиопия"], metro_text: "Италия (1889-1941), Великобритания (1941-1952), Эфиопия (1952-1993)", year: "1993" },
+    "DJI": { name: "Джибути", capital: "Джибути", metro: ["Франция"], metro_text: "Франция (1861-1977)", year: "1977" },
+    "SOM": { name: "Сомали", capital: "Могадишо", metro: ["Великобритания", "Италия"], metro_text: "Великобритания (до 1960), Италия (до 1960)", year: "1960" },
+    "SOL": { name: "Сомалиленд", capital: "Харгейса", metro: ["Великобритания"], metro_text: "Великобритания (до 1960), в составе Сомали (1960-1991)", year: "1991" },
+    "KEN": { name: "Кения", capital: "Найроби", metro: ["Великобритания"], metro_text: "Великобритания (1895-1963)", year: "1963" },
+    "UGA": { name: "Уганда", capital: "Кампала", metro: ["Великобритания"], metro_text: "Великобритания (1894-1962)", year: "1962" },
+    "RWA": { name: "Руанда", capital: "Кигали", metro: ["Германия", "Бельгия"], metro_text: "Германия (1899-1916), Бельгия (1916-1962)", year: "1962" },
+    "BDI": { name: "Бурунди", capital: "Гитега", metro: ["Германия", "Бельгия"], metro_text: "Германия (1899-1916), Бельгия (1916-1962)", year: "1962" },
+    "TZA": { name: "Танзания", capital: "Додома", metro: ["Германия", "Великобритания"], metro_text: "Германия (1885-1919), Великобритания (1919-1961)", year: "1961" },
+    "MOZ": { name: "Мозамбик", capital: "Мапуту", metro: ["Португалия"], metro_text: "Португалия (до 1975)", year: "1975" },
+    "MWI": { name: "Малави", capital: "Лилонгве", metro: ["Великобритания"], metro_text: "Великобритания (1891-1964)", year: "1964" },
+    "ZMB": { name: "Замбия", capital: "Лусака", metro: ["Великобритания"], metro_text: "Великобритания (до 1964)", year: "1964" },
+    "ZWE": { name: "Зимбабве", capital: "Хараре", metro: ["Великобритания"], metro_text: "Великобритания (до 1980)", year: "1980" },
+    "MDG": { name: "Мадагаскар", capital: "Антананариву", metro: ["Франция"], metro_text: "Франция (1885-1960)", year: "1960" },
+    "NAM": { name: "Намибия", capital: "Виндхук", metro: ["Германия", "ЮАР"], metro_text: "Германия (1884-1915), ЮАР (1915-1990)", year: "1990" },
+    "BWA": { name: "Ботсвана", capital: "Габороне", metro: ["Великобритания"], metro_text: "Великобритания (1885-1966)", year: "1966" },
+    "ZAF": { name: "Южно-Африканская Республика", capital: "Кейптаун", metro: ["Нидерланды", "Великобритания"], metro_text: "Нидерланды (1652-1795), Великобритания (1795-1910)", year: "1910" },
+    "SWZ": { name: "Эсватини", capital: "Мбабане", metro: ["Великобритания"], metro_text: "Великобритания (до 1968)", year: "1968" },
+    "LSO": { name: "Лесото", capital: "Масеру", metro: ["Великобритания"], metro_text: "Великобритания (1868-1966)", year: "1966" }
+};
+
+// Мелкие островные государства
+const islandNations = [
+    { id: "CPV", coords: [-24.01, 16.00], info: { name: "Кабо-Верде", capital: "Прая", metro: ["Португалия"], metro_text: "Португалия (до 1975)", year: "1975" } },
+    { id: "STP", coords: [6.61, 0.25], info: { name: "Сан-Томе и Принсипи", capital: "Сан-Томе", metro: ["Португалия"], metro_text: "Португалия (до 1975)", year: "1975" } },
+    { id: "COM", coords: [43.33, -11.64], info: { name: "Коморы", capital: "Морони", metro: ["Франция"], metro_text: "Франция (1886-1975)", year: "1975" } },
+    { id: "SYC", coords: [55.49, -4.68], info: { name: "Сейшельские острова", capital: "Виктория", metro: ["Франция", "Великобритания"], metro_text: "Франция (1750-1814), Великобритания (1814-1976)", year: "1976" } },
+    { id: "MUS", coords: [57.55, -20.35], info: { name: "Маврикий", capital: "Порт-Луи", metro: ["Франция", "Великобритания"], metro_text: "Франция (1715-1810), Великобритания (1810-1968)", year: "1968" } }
+];
+
+const legendContainer = d3.select("#legend-items");
+Object.entries(metropoleColors).forEach(([metro, color]) => {
+    const item = legendContainer.append("div").attr("class", "legend-item");
+    item.append("div").attr("class", "legend-color").style("background-color", color);
+    item.append("div").text(metro);
+});
+const mixedItem = legendContainer.append("div").attr("class", "legend-item").style("margin-top", "8px");
+mixedItem.append("div").attr("class", "legend-pattern");
+mixedItem.append("div").style("font-style", "italic").style("font-size", "11px").text("Штриховка: Несколько метрополий");
+
+const svg = d3.select("#map-container");
+const defs = svg.append("defs");
+
+function getFillStyle(metros, id) {
+    if (metros.length === 1) return metropoleColors[metros[0]] || "#ccc";
+    const patternId = "pattern-" + id;
+    if (defs.select(`#${patternId}`).empty()) {
+        const pattern = defs.append("pattern")
+            .attr("id", patternId)
+            .attr("patternUnits", "userSpaceOnUse")
+            .attr("width", metros.length * 6)
+            .attr("height", metros.length * 6)
+            .attr("patternTransform", "rotate(45)");
+        metros.forEach((metro, index) => {
+            pattern.append("rect")
+                .attr("x", index * 6)
+                .attr("y", 0)
+                .attr("width", 6)
+                .attr("height", metros.length * 6)
+                .attr("fill", metropoleColors[metro] || "#ccc");
+        });
+    }
+    return `url(#pattern-${id})`;
+}
+
+const projection = d3.geoMercator();
+const path = d3.geoPath().projection(projection);
+const tooltip = d3.select("#tooltip");
+
+function showTooltip(event, info) {
+    tooltip.transition().duration(200).style("opacity", .95);
+    let xPos = event.pageX + 15;
+    let yPos = event.pageY - 28;
+    if (xPos + 250 > window.innerWidth) xPos = event.pageX - 260;
+    tooltip.html(`
+        <div class="tooltip-title">${info.name}</div>
+        <div class="tooltip-row"><b>Столица:</b> ${info.capital}</div>
+        <div class="tooltip-row"><b>Год независимости:</b> ${info.year}</div>
+        <div class="tooltip-row"><b>Метрополия:</b> ${info.metro_text}</div>
+    `)
+    .style("left", xPos + "px")
+    .style("top", yPos + "px");
+}
+
+function hideTooltip() {
+    tooltip.transition().duration(500).style("opacity", 0);
+}
+
+// Умная функция сопоставления стран
+function resolveGeoId(properties) {
+    const idCandidates = [properties.ADM0_A3, properties.ISO_A3, properties.GU_A3, properties.SU_A3];
+    
+    for (let id of idCandidates) {
+        if (!id || id === "-99") continue;
+        if (countryData[id]) return id;
+        
+        // Алиасы для проблемных территорий
+        if (id === "SAH") return "ESH"; // Западная Сахара
+        if (id === "SDS") return "SSD"; // Южный Судан
+        // Сомалиленд (SOL) больше не приравниваем к Сомали (SOM), так как он добавлен отдельно
+    }
+    
+    // Резервная проверка по названию
+    const name = properties.NAME || properties.ADMIN;
+    if (name === "Madagascar") return "MDG";
+    if (name === "Western Sahara" || name === "W. Sahara") return "ESH";
+    if (name === "Somaliland") return "SOL";
+    
+    return null;
+}
+
+d3.json("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson").then(world => {
+    
+    // Фильтруем данные
+    const africa = world.features.filter(d => resolveGeoId(d.properties) !== null);
+    
+    projection.fitExtent([[50, 50], [window.innerWidth - 50, window.innerHeight - 50]], {type: "FeatureCollection", features: africa});
+
+    svg.selectAll("path")
+        .data(africa)
+        .enter().append("path")
+        .attr("d", path)
+        .attr("class", "country")
+        .attr("fill", d => {
+            const geoId = resolveGeoId(d.properties);
+            return getFillStyle(countryData[geoId].metro, geoId);
+        })
+        .on("mouseover", (event, d) => showTooltip(event, countryData[resolveGeoId(d.properties)]))
+        .on("mouseout", hideTooltip)
+        .on("click", (event, d) => showTooltip(event, countryData[resolveGeoId(d.properties)]));
+
+    svg.selectAll(".year-label")
+        .data(africa)
+        .enter().append("text")
+        .attr("class", "year-label")
+        .attr("transform", function(d) {
+            const centroid = path.centroid(d);
+            return (!isNaN(centroid[0]) && !isNaN(centroid[1])) ? `translate(${centroid[0]}, ${centroid[1]})` : "translate(-1000,-1000)"; 
+        })
+        .text(d => {
+            const geoId = resolveGeoId(d.properties);
+            return countryData[geoId].year.split('/')[0].split(' ')[0];
+        });
+
+    const islands = svg.selectAll(".island-group")
+        .data(islandNations)
+        .enter().append("g")
+        .attr("transform", d => {
+            const coords = projection(d.coords);
+            return `translate(${coords[0]}, ${coords[1]})`;
+        });
+
+    islands.append("circle")
+        .attr("class", "island-marker")
+        .attr("r", 7)
+        .attr("fill", d => getFillStyle(d.info.metro, d.id))
+        .on("mouseover", (event, d) => showTooltip(event, d.info))
+        .on("mouseout", hideTooltip)
+        .on("click", (event, d) => showTooltip(event, d.info));
+
+    islands.append("text")
+        .attr("class", "island-label")
+        .attr("dx", 10)
+        .attr("dy", 3)
+        .text(d => d.info.year.split('/')[0].split(' ')[0]);
+});
+
+window.addEventListener('resize', () => {
+    svg.attr("width", window.innerWidth).attr("height", window.innerHeight);
+});
+</script>
+</body>
+</html>
