@@ -12,7 +12,8 @@
         .country { stroke: #333; stroke-width: 0.5px; transition: opacity 0.2s; cursor: pointer; }
         .country:hover { opacity: 0.7; }
         
-        .island-marker { cursor: pointer; transition: opacity 0.2s; stroke: #333; stroke-width: 0.5px; }
+        .island-marker { cursor: pointer; transition: opacity 0.2s; }
+        .island-marker circle { stroke: #333; stroke-width: 0.5px; }
         .island-marker:hover { opacity: 0.7; }
         
         .year-label { font-size: 8px; font-weight: bold; fill: #000; text-anchor: middle; pointer-events: none; text-shadow: 1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white; }
@@ -54,15 +55,18 @@
             position: absolute;
             bottom: 20px;
             right: 20px;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             padding: 15px;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             z-index: 5;
             font-size: 13px;
+            cursor: grab; /* Курсор для перетаскивания */
+            user-select: none; /* Запрет выделения текста при перетаскивании */
         }
-        #legend h3 { margin: 0 0 10px 0; font-size: 15px; text-align: center; }
-        .legend-item { display: flex; align-items: center; margin-bottom: 6px; }
+        #legend:active { cursor: grabbing; }
+        #legend h3 { margin: 0 0 10px 0; font-size: 15px; text-align: center; pointer-events: none; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 6px; pointer-events: none; }
         .legend-color { width: 18px; height: 18px; margin-right: 10px; border: 1px solid #777; border-radius: 3px; }
         .legend-stripe { background: repeating-linear-gradient(45deg, #ffd54f, #ffd54f 4px, #e57373 4px, #e57373 8px); }
     </style>
@@ -81,7 +85,7 @@
 </div>
 
 <div id="legend">
-    <h3>Условные обозначения</h3>
+    <h3>Условные обозначения (перетащите)</h3>
     <div id="legend-items"></div>
 </div>
 
@@ -91,6 +95,32 @@
 </svg>
 
 <script>
+    // --- ЛОГИКА ПЕРЕТАСКИВАНИЯ ЛЕГЕНДЫ ---
+    const legend = document.getElementById("legend");
+    let isDragging = false;
+    let offsetX, offsetY;
+
+    legend.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        const rect = legend.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        // Отключаем привязку к правому/нижнему краю, переходим на абсолютные координаты от левого/верхнего
+        legend.style.right = 'auto';
+        legend.style.bottom = 'auto';
+        legend.style.left = `${e.clientX - offsetX}px`;
+        legend.style.top = `${e.clientY - offsetY}px`;
+    });
+
+    document.addEventListener("mouseup", () => {
+        isDragging = false;
+    });
+
+    // --- ЛОГИКА КАРТЫ (D3.js) ---
     const svg = d3.select("#map-container");
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -103,19 +133,35 @@
     const path = d3.geoPath().projection(projection);
     const mapGroup = svg.append("g");
 
+    // Зум с сохранением размеров маркеров (семантический зум)
     const zoom = d3.zoom()
-        .scaleExtent([0.5, 10])
+        .scaleExtent([0.5, 15])
         .on("zoom", (event) => {
+            const k = event.transform.k;
             mapGroup.attr("transform", event.transform);
+            
+            // Сохраняем визуальную толщину границ стран
+            mapGroup.selectAll(".country").style("stroke-width", (0.5 / k) + "px");
+            
+            // Кружки островов не будут увеличиваться и накладываться
+            mapGroup.selectAll(".island-marker circle")
+                .attr("r", 5 / k)
+                .style("stroke-width", (0.5 / k) + "px");
+                
+            // Текст также сохраняет свой размер
+            mapGroup.selectAll(".year-label")
+                .style("font-size", (8 / k) + "px");
+                
+            // Корректируем отступ текста над островным кружком
+            mapGroup.selectAll(".island-marker text")
+                .attr("y", -8 / k);
         });
     svg.call(zoom);
 
-    // Закрытие тултипа при клике по пустому месту
     svg.on("click", () => {
         d3.select("#tooltip").transition().duration(200).style("opacity", 0);
     });
 
-    // Палитра метрополий
     const powerColors = {
         "Испания": "#ffd54f",
         "Португалия": "#81c784",
@@ -129,7 +175,6 @@
         "Гаити": "#90a4ae"
     };
 
-    // Генерация легенды
     const legendContainer = d3.select("#legend-items");
     Object.keys(powerColors).forEach(power => {
         const item = legendContainer.append("div").attr("class", "legend-item");
@@ -140,9 +185,7 @@
     stripeItem.append("div").attr("class", "legend-color legend-stripe");
     stripeItem.append("span").style("font-size", "11px").text("Смена метрополий (штриховка)");
 
-    // Полные данные из вашего документа
     const countryData = {
-        // Независимые
         "MEX": { name: "Мексика", capital: "Мехико", metro: "Испания (до 1821)", year: "1821", status: "independent" },
         "GTM": { name: "Гватемала", capital: "Гватемала", metro: "Испания (до 1821)", year: "1821", status: "independent" },
         "BLZ": { name: "Белиз", capital: "Бельмопан", metro: "Испания (до 1798), Великобритания (до 1981)", year: "1981", status: "independent" },
@@ -176,8 +219,6 @@
         "VCT": { name: "Сент-Винсент и Гренадины", capital: "Кингстаун", metro: "Франция (до 1783), Великобритания (до 1979)", year: "1979", status: "independent" },
         "GRD": { name: "Гренада", capital: "Сент-Джорджес", metro: "Франция (до 1763), Великобритания (до 1974)", year: "1974", status: "independent" },
         "TTO": { name: "Тринидад и Тобаго", capital: "Порт-оф-Спейн", metro: "Испания (до 1797), Великобритания (до 1962)", year: "1962", status: "independent" },
-
-        // Зависимые
         "GUF": { name: "Гвиана (Фр.)", capital: "Кайенна", metro: "Португалия (до 1817), Франция (с 1817 по н.в.)", status: "dependent" },
         "CYM": { name: "Острова Кайман", capital: "Джорджтаун", metro: "Испания (до 1670), Великобритания (с 1670 по н.в.)", status: "dependent" },
         "TCA": { name: "Теркс и Кайкос", capital: "Коберн-Таун", metro: "Франция (до 1764), Испания (до 1783), Великобритания (с 1783 по н.в.)", status: "dependent" },
@@ -206,7 +247,6 @@
         { id: "ABW", coords: [-69.9683, 12.5211] }
     ];
 
-    // Функция для определения стиля заливки (сплошной цвет или штриховка)
     function getFillStyle(metro) {
         if (!metro) return "#eaeaea";
         const powers = Object.keys(powerColors).filter(p => metro.includes(p));
@@ -214,7 +254,6 @@
         if (powers.length === 0) return "#eaeaea";
         if (powers.length === 1) return powerColors[powers[0]];
         
-        // Создание паттерна для нескольких метрополий
         const patternId = `pattern-${powers.join('-')}`;
         const defs = svg.select("defs");
         
@@ -226,13 +265,11 @@
                 .attr("patternUnits", "userSpaceOnUse")
                 .attr("patternTransform", "rotate(45)");
             
-            // Фон (первая метрополия)
             pattern.append("rect")
                 .attr("width", 10)
                 .attr("height", 10)
                 .attr("fill", powerColors[powers[0]]);
             
-            // Полосы для остальных
             const stripeWidth = 10 / powers.length;
             for (let i = 1; i < powers.length; i++) {
                 pattern.append("rect")
@@ -254,7 +291,6 @@
             <div class="tooltip-row"><b>Метрополии:</b><br>${data.metro}</div>
         `;
         
-        // Показываем год независимости только если страна независимая
         if (data.status === 'independent') {
             html += `<div class="tooltip-row" style="margin-top: 5px;"><b>Год независимости:</b> ${data.year}</div>`;
         }
@@ -268,7 +304,6 @@
     }
 
     d3.json("ne_110m_admin_0_countries.geojson").then(world => {
-        // Отрисовка основных стран
         mapGroup.selectAll(".country")
             .data(world.features)
             .enter().append("path")
@@ -279,16 +314,15 @@
                 return countryData[geoId] ? getFillStyle(countryData[geoId].metro) : "#eaeaea";
             })
             .on("click", function(event, d) {
-                event.stopPropagation(); // Предотвращаем срабатывание клика по svg
+                event.stopPropagation();
                 const geoId = d.properties.ADM0_A3 || d.properties.GU_A3;
                 if(countryData[geoId]) showTooltip(event, countryData[geoId]);
             });
 
-        // Добавление годов на карту
-        mapGroup.selectAll(".year-label")
+        mapGroup.selectAll(".year-label.main")
             .data(world.features)
             .enter().append("text")
-            .attr("class", "year-label")
+            .attr("class", "year-label main")
             .attr("transform", function(d) {
                 const centroid = path.centroid(d);
                 return (!isNaN(centroid[0]) && !isNaN(centroid[1])) ? `translate(${centroid[0]}, ${centroid[1]})` : "translate(-1000,-1000)";
@@ -298,7 +332,6 @@
                 return (countryData[geoId] && countryData[geoId].status === 'independent') ? countryData[geoId].year : "";
             });
 
-        // Мелкие островные государства (маркеры)
         const islands = mapGroup.selectAll(".island-group")
             .data(islandNations)
             .enter().append("g")
@@ -340,14 +373,14 @@
                 return isVisible(geoId) ? "block" : "none";
             });
             
-        mapGroup.selectAll(".year-label")
+        mapGroup.selectAll(".year-label.main")
             .style("display", d => {
                 const geoId = d.id || d.properties?.ADM0_A3 || d.properties?.GU_A3;
                 if (!countryData[geoId]) return "none";
                 return isVisible(geoId) ? "block" : "none";
             });
 
-        mapGroup.selectAll(".island-marker circle")
+        mapGroup.selectAll(".island-marker")
             .style("display", d => isVisible(d.id) ? "block" : "none");
     }
 
