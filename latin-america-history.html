@@ -6,86 +6,92 @@
     <title>Независимость стран Латинской Америки</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; background-color: #e0f7fa; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        body { margin: 0; padding: 0; background-color: #eef2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; touch-action: none; }
         #map-container { width: 100vw; height: 100vh; display: block; }
         
-        .country { stroke: #333; stroke-width: 0.5px; transition: opacity 0.2s; cursor: pointer; }
+        .graticule { fill: none; stroke: #b0bec5; stroke-width: 0.5px; stroke-dasharray: 2,2; opacity: 0.5; }
+        
+        .country { stroke: #555; stroke-width: 0.5px; transition: opacity 0.2s; cursor: pointer; }
         .country:hover { opacity: 0.7; }
+        .country-non-target { fill: #f8f9fa; stroke: #e9ecef; pointer-events: none; }
         
         .island-marker { cursor: pointer; transition: opacity 0.2s; }
-        .island-marker circle { stroke: #333; stroke-width: 0.5px; }
+        .island-marker circle { stroke: #555; stroke-width: 0.5px; }
         .island-marker:hover { opacity: 0.7; }
         
-        .year-label { font-size: 8px; font-weight: bold; fill: #000; text-anchor: middle; pointer-events: none; text-shadow: 1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white; }
+        .year-label { font-size: 8px; font-weight: bold; fill: #111; text-anchor: middle; pointer-events: none; text-shadow: 1px 1px 2px rgba(255,255,255,0.8), -1px -1px 2px rgba(255,255,255,0.8); }
+        .country-name-label { font-size: 10px; fill: #333; text-anchor: middle; pointer-events: none; font-weight: 600; text-shadow: 1px 1px 2px white, -1px -1px 2px white; display: none; }
         
         #tooltip {
             position: absolute;
             background: rgba(255, 255, 255, 0.95);
-            border: 1px solid #333;
+            border: 1px solid #bdc3c7;
             padding: 12px;
-            border-radius: 5px;
+            border-radius: 6px;
             pointer-events: none;
             opacity: 0;
             font-size: 14px;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+            box-shadow: 0px 6px 12px rgba(0,0,0,0.15);
             max-width: 350px;
             z-index: 10;
         }
-        .tooltip-title { font-weight: bold; font-size: 16px; margin-bottom: 8px; color: #2c3e50; border-bottom: 1px solid #ccc; padding-bottom: 4px;}
-        .tooltip-row { margin-bottom: 4px; line-height: 1.4; }
+        .tooltip-title { font-weight: bold; font-size: 16px; margin-bottom: 8px; color: #2c3e50; border-bottom: 1px solid #ecf0f1; padding-bottom: 4px;}
+        .tooltip-row { margin-bottom: 4px; line-height: 1.4; color: #34495e; }
         
-        #controls {
+        .panel {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 5;
-        }
-        #controls h2 { margin: 0 0 10px 0; font-size: 16px; }
-        .toggle-label { display: flex; align-items: center; margin-bottom: 5px; font-size: 14px; cursor: pointer; }
-        .toggle-label input { margin-right: 8px; cursor: pointer; }
-        
-        .back-link { display: inline-block; margin-bottom: 15px; text-decoration: none; color: #3498db; font-weight: bold; }
-        .back-link:hover { text-decoration: underline; }
-
-        #legend {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
             background: rgba(255, 255, 255, 0.95);
             padding: 15px;
             border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             z-index: 5;
-            font-size: 13px;
-            cursor: grab; /* Курсор для перетаскивания */
-            user-select: none; /* Запрет выделения текста при перетаскивании */
         }
+        
+        #controls { top: 15px; left: 15px; width: 280px; }
+        #controls h2 { margin: 0 0 10px 0; font-size: 16px; color: #2c3e50; }
+        .control-section { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .control-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .toggle-label { display: flex; align-items: center; margin-bottom: 6px; font-size: 13px; cursor: pointer; color: #333; }
+        .toggle-label input { margin-right: 8px; cursor: pointer; }
+        
+        .back-link { display: inline-block; margin-bottom: 15px; text-decoration: none; color: #2980b9; font-weight: bold; font-size: 14px; }
+        .back-link:hover { text-decoration: underline; }
+
+        #legend { bottom: 20px; right: 20px; font-size: 13px; cursor: grab; user-select: none; min-width: 200px; }
         #legend:active { cursor: grabbing; }
-        #legend h3 { margin: 0 0 10px 0; font-size: 15px; text-align: center; pointer-events: none; }
-        .legend-item { display: flex; align-items: center; margin-bottom: 6px; pointer-events: none; }
-        .legend-color { width: 18px; height: 18px; margin-right: 10px; border: 1px solid #777; border-radius: 3px; }
-        .legend-stripe { background: repeating-linear-gradient(45deg, #ffd54f, #ffd54f 4px, #e57373 4px, #e57373 8px); }
+        #legend h3 { margin: 0 0 10px 0; font-size: 14px; text-align: center; pointer-events: none; color: #2c3e50; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 6px; pointer-events: none; color: #444; }
+        .legend-color { width: 16px; height: 16px; margin-right: 10px; border: 1px solid #bdc3c7; border-radius: 3px; }
     </style>
 </head>
 <body>
 
-<div id="controls">
+<div id="controls" class="panel">
     <a href="index.html" class="back-link">← На главное меню</a>
-    <h2>Отображение стран</h2>
-    <label class="toggle-label">
-        <input type="checkbox" id="toggle-independent" checked> Независимые государства
-    </label>
-    <label class="toggle-label">
-        <input type="checkbox" id="toggle-dependent" checked> Зависимые территории
-    </label>
+    
+    <div class="control-section">
+        <h2>Режим раскраски</h2>
+        <label class="toggle-label">
+            <input type="radio" name="color-mode" value="metro" checked> Метрополии
+        </label>
+        <label class="toggle-label">
+            <input type="radio" name="color-mode" value="period"> Периоды независимости
+        </label>
+    </div>
+
+    <div class="control-section">
+        <h2>Отображение стран</h2>
+        <label class="toggle-label">
+            <input type="checkbox" id="toggle-independent" checked> Независимые государства
+        </label>
+        <label class="toggle-label">
+            <input type="checkbox" id="toggle-dependent" checked> Зависимые территории
+        </label>
+    </div>
 </div>
 
-<div id="legend">
-    <h3>Условные обозначения (перетащите)</h3>
+<div id="legend" class="panel">
+    <h3>Условные обозначения</h3>
     <div id="legend-items"></div>
 </div>
 
@@ -97,8 +103,7 @@
 <script>
     // --- ЛОГИКА ПЕРЕТАСКИВАНИЯ ЛЕГЕНДЫ ---
     const legend = document.getElementById("legend");
-    let isDragging = false;
-    let offsetX, offsetY;
+    let isDragging = false, offsetX, offsetY;
 
     legend.addEventListener("mousedown", (e) => {
         isDragging = true;
@@ -109,81 +114,79 @@
 
     document.addEventListener("mousemove", (e) => {
         if (!isDragging) return;
-        // Отключаем привязку к правому/нижнему краю, переходим на абсолютные координаты от левого/верхнего
         legend.style.right = 'auto';
         legend.style.bottom = 'auto';
         legend.style.left = `${e.clientX - offsetX}px`;
         legend.style.top = `${e.clientY - offsetY}px`;
     });
 
-    document.addEventListener("mouseup", () => {
-        isDragging = false;
-    });
+    document.addEventListener("mouseup", () => isDragging = false);
 
-    // --- ЛОГИКА КАРТЫ (D3.js) ---
+    // --- ЛОГИКА КАРТЫ ---
     const svg = d3.select("#map-container");
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    const projection = d3.geoMercator()
-        .center([-75, -5])
-        .scale(400)
+    // Использование равновеликой азимутальной проекции
+    const projection = d3.geoAzimuthalEqualArea()
+        .rotate([65, 0]) // Вращение для центрирования на 65° з.д.
+        .center([0, -20]) // Центр на 20° ю.ш.
+        .scale(550)
         .translate([width / 2, height / 2]);
 
     const path = d3.geoPath().projection(projection);
     const mapGroup = svg.append("g");
 
-    // Зум с сохранением размеров маркеров (семантический зум)
+    // Градусная сетка
+    const graticule = d3.geoGraticule();
+    mapGroup.append("path")
+        .datum(graticule)
+        .attr("class", "graticule")
+        .attr("d", path);
+
     const zoom = d3.zoom()
         .scaleExtent([0.5, 15])
         .on("zoom", (event) => {
             const k = event.transform.k;
             mapGroup.attr("transform", event.transform);
             
-            // Сохраняем визуальную толщину границ стран
             mapGroup.selectAll(".country").style("stroke-width", (0.5 / k) + "px");
+            mapGroup.selectAll(".island-marker circle").attr("r", 4 / k).style("stroke-width", (0.5 / k) + "px");
+            mapGroup.selectAll(".year-label").style("font-size", (8 / k) + "px");
+            mapGroup.selectAll(".island-marker text.year-label").attr("y", -6 / k);
             
-            // Кружки островов не будут увеличиваться и накладываться
-            mapGroup.selectAll(".island-marker circle")
-                .attr("r", 5 / k)
-                .style("stroke-width", (0.5 / k) + "px");
-                
-            // Текст также сохраняет свой размер
-            mapGroup.selectAll(".year-label")
-                .style("font-size", (8 / k) + "px");
-                
-            // Корректируем отступ текста над островным кружком
-            mapGroup.selectAll(".island-marker text")
-                .attr("y", -8 / k);
+            // Семантическое появление названий стран
+            mapGroup.selectAll(".country-name-label")
+                .style("display", k > 2.5 ? "block" : "none")
+                .style("font-size", (10 / k) + "px");
         });
     svg.call(zoom);
 
-    svg.on("click", () => {
-        d3.select("#tooltip").transition().duration(200).style("opacity", 0);
-    });
+    svg.on("click", () => d3.select("#tooltip").transition().duration(200).style("opacity", 0));
 
+    // --- ДАННЫЕ И ПАЛИТРЫ ---
     const powerColors = {
-        "Испания": "#ffd54f",
-        "Португалия": "#81c784",
-        "Великобритания": "#e57373",
-        "Франция": "#64b5f6",
-        "Нидерланды": "#ffb74d",
-        "США": "#ba68c8",
-        "Дания": "#a1887f",
-        "Колумбия": "#4dd0e1",
-        "Бразилия": "#dce775",
-        "Гаити": "#90a4ae"
+        "Испания": "#ffd54f", "Португалия": "#81c784", "Великобритания": "#e57373",
+        "Франция": "#64b5f6", "Нидерланды": "#ffb74d", "США": "#ba68c8",
+        "Дания": "#a1887f", "Колумбия": "#4dd0e1", "Бразилия": "#dce775", "Гаити": "#90a4ae"
     };
 
-    const legendContainer = d3.select("#legend-items");
-    Object.keys(powerColors).forEach(power => {
-        const item = legendContainer.append("div").attr("class", "legend-item");
-        item.append("div").attr("class", "legend-color").style("background-color", powerColors[power]);
-        item.append("span").text(power);
-    });
-    const stripeItem = legendContainer.append("div").attr("class", "legend-item").style("margin-top", "10px");
-    stripeItem.append("div").attr("class", "legend-color legend-stripe");
-    stripeItem.append("span").style("font-size", "11px").text("Смена метрополий (штриховка)");
+    const periodColors = {
+        "До 1810 г.": "#f4a261",
+        "1811–1830 гг.": "#e76f51",
+        "1831–1900 гг.": "#2a9d8f",
+        "XX век": "#264653",
+        "Зависимые / Н.В.": "#a8dadc"
+    };
+
+    function getPeriod(yearStr) {
+        if (!yearStr || yearStr === "н.в.") return "Зависимые / Н.В.";
+        const year = parseInt(yearStr);
+        if (year <= 1810) return "До 1810 г.";
+        if (year <= 1830) return "1811–1830 гг.";
+        if (year <= 1900) return "1831–1900 гг.";
+        return "XX век";
+    }
 
     const countryData = {
         "MEX": { name: "Мексика", capital: "Мехико", metro: "Испания (до 1821)", year: "1821", status: "independent" },
@@ -231,7 +234,9 @@
         "MTQ": { name: "Мартиника", capital: "Фор-де-Франс", metro: "Великобритания (до 1814), Франция (с 1814 по н.в.)", status: "dependent" },
         "BES": { name: "Бонэйр", capital: "Кралендейк", metro: "Испания (до 1636), Великобритания (до 1814), Нидерланды (с 1814 по н.в.)", status: "dependent" },
         "CUW": { name: "Кюрасао", capital: "Виллемстад", metro: "Испания (до 1634), Великобритания (до 1815), Нидерланды (с 1815 по н.в.)", status: "dependent" },
-        "ABW": { name: "Аруба", capital: "Ораньестад", metro: "Испания (до 1636), Великобритания (до 1816), Нидерланды (с 1816 по н.в.)", status: "dependent" }
+        "ABW": { name: "Аруба", capital: "Ораньестад", metro: "Испания (до 1636), Великобритания (до 1816), Нидерланды (с 1816 по н.в.)", status: "dependent" },
+        // Спорная территория
+        "FLK": { name: "Фолклендские (Мальвинские) острова", capital: "Стэнли", metro: "Великобритания (с 1833) / Аргентина (претендует)", year: "н.в.", status: "dependent", disputed: true }
     };
 
     const islandNations = [
@@ -247,57 +252,74 @@
         { id: "ABW", coords: [-69.9683, 12.5211] }
     ];
 
-    function getFillStyle(metro) {
-        if (!metro) return "#eaeaea";
-        const powers = Object.keys(powerColors).filter(p => metro.includes(p));
+    function updateLegend() {
+        const mode = d3.select('input[name="color-mode"]:checked').node().value;
+        const container = d3.select("#legend-items").html("");
         
-        if (powers.length === 0) return "#eaeaea";
-        if (powers.length === 1) return powerColors[powers[0]];
+        if (mode === 'metro') {
+            Object.keys(powerColors).forEach(power => {
+                const item = container.append("div").attr("class", "legend-item");
+                item.append("div").attr("class", "legend-color").style("background-color", powerColors[power]);
+                item.append("span").text(power);
+            });
+            const stripeItem = container.append("div").attr("class", "legend-item").style("margin-top", "8px");
+            stripeItem.append("div").attr("class", "legend-color").style("background", "repeating-linear-gradient(45deg, #ffd54f, #ffd54f 4px, #e57373 4px, #e57373 8px)");
+            stripeItem.append("span").style("font-size", "11px").text("Смена метрополий");
+        } else {
+            Object.keys(periodColors).forEach(period => {
+                const item = container.append("div").attr("class", "legend-item");
+                item.append("div").attr("class", "legend-color").style("background-color", periodColors[period]);
+                item.append("span").text(period);
+            });
+        }
+        
+        // Легенда для Фолклендов
+        const dispItem = container.append("div").attr("class", "legend-item").style("margin-top", "8px");
+        dispItem.append("div").attr("class", "legend-color").style("background", "repeating-linear-gradient(45deg, #e57373, #e57373 4px, #64b5f6 4px, #64b5f6 8px)");
+        dispItem.append("span").style("font-size", "11px").text("Спорная территория");
+    }
+
+    function getFillStyle(geoId, mode) {
+        const data = countryData[geoId];
+        if (!data) return "none"; // Не красим другие страны мира
+        
+        if (data.disputed) {
+            const defs = svg.select("defs");
+            if (defs.select("#pattern-disputed").empty()) {
+                const pattern = defs.append("pattern").attr("id", "pattern-disputed").attr("width", 8).attr("height", 8).attr("patternUnits", "userSpaceOnUse").attr("patternTransform", "rotate(45)");
+                pattern.append("rect").attr("width", 8).attr("height", 8).attr("fill", powerColors["Великобритания"]);
+                pattern.append("rect").attr("width", 4).attr("height", 8).attr("fill", powerColors["Франция"]); // Синий цвет как у Аргентины
+            }
+            return "url(#pattern-disputed)";
+        }
+
+        if (mode === 'period') return periodColors[getPeriod(data.year)];
+
+        const powers = Object.keys(powerColors).filter(p => data.metro.includes(p));
+        if (powers.length <= 1) return powerColors[powers[0]] || "#ccc";
         
         const patternId = `pattern-${powers.join('-')}`;
         const defs = svg.select("defs");
-        
         if (defs.select(`#${patternId}`).empty()) {
-            const pattern = defs.append("pattern")
-                .attr("id", patternId)
-                .attr("width", 10)
-                .attr("height", 10)
-                .attr("patternUnits", "userSpaceOnUse")
-                .attr("patternTransform", "rotate(45)");
-            
-            pattern.append("rect")
-                .attr("width", 10)
-                .attr("height", 10)
-                .attr("fill", powerColors[powers[0]]);
-            
-            const stripeWidth = 10 / powers.length;
+            const pattern = defs.append("pattern").attr("id", patternId).attr("width", 10).attr("height", 10).attr("patternUnits", "userSpaceOnUse").attr("patternTransform", "rotate(45)");
+            pattern.append("rect").attr("width", 10).attr("height", 10).attr("fill", powerColors[powers[0]]);
+            const stripeW = 10 / powers.length;
             for (let i = 1; i < powers.length; i++) {
-                pattern.append("rect")
-                    .attr("x", i * stripeWidth)
-                    .attr("width", stripeWidth)
-                    .attr("height", 10)
-                    .attr("fill", powerColors[powers[i]]);
+                pattern.append("rect").attr("x", i * stripeW).attr("width", stripeW).attr("height", 10).attr("fill", powerColors[powers[i]]);
             }
         }
         return `url(#${patternId})`;
     }
 
-    const tooltip = d3.select("#tooltip");
-
     function showTooltip(event, data) {
-        let html = `
-            <div class="tooltip-title">${data.name}</div>
-            <div class="tooltip-row"><b>Административный центр:</b> ${data.capital}</div>
-            <div class="tooltip-row"><b>Метрополии:</b><br>${data.metro}</div>
-        `;
-        
-        if (data.status === 'independent') {
-            html += `<div class="tooltip-row" style="margin-top: 5px;"><b>Год независимости:</b> ${data.year}</div>`;
-        }
-        
-        html += `<div class="tooltip-row" style="margin-top: 5px;"><b>Статус:</b> ${data.status === 'independent' ? 'Независимое государство' : 'Зависимая территория'}</div>`;
+        let html = `<div class="tooltip-title">${data.name}</div>
+                    <div class="tooltip-row"><b>Админ. центр:</b> ${data.capital}</div>
+                    <div class="tooltip-row"><b>Метрополии:</b><br>${data.metro}</div>`;
+        if (data.status === 'independent') html += `<div class="tooltip-row" style="margin-top: 5px;"><b>Год независимости:</b> ${data.year}</div>`;
+        if (data.disputed) html += `<div class="tooltip-row" style="margin-top: 5px; color: #c0392b;"><b>Статус:</b> Спорная территория</div>`;
+        else html += `<div class="tooltip-row" style="margin-top: 5px;"><b>Статус:</b> ${data.status === 'independent' ? 'Независимое государство' : 'Зависимая территория'}</div>`;
 
-        tooltip.html(html)
+        d3.select("#tooltip").html(html)
             .style("left", (event.pageX + 15) + "px")
             .style("top", (event.pageY - 28) + "px")
             .transition().duration(200).style("opacity", 1);
@@ -307,18 +329,15 @@
         mapGroup.selectAll(".country")
             .data(world.features)
             .enter().append("path")
-            .attr("class", "country")
+            .attr("class", d => countryData[d.properties.ADM0_A3 || d.properties.GU_A3] ? "country" : "country country-non-target")
             .attr("d", path)
-            .attr("fill", d => {
-                const geoId = d.properties.ADM0_A3 || d.properties.GU_A3;
-                return countryData[geoId] ? getFillStyle(countryData[geoId].metro) : "#eaeaea";
-            })
             .on("click", function(event, d) {
                 event.stopPropagation();
                 const geoId = d.properties.ADM0_A3 || d.properties.GU_A3;
                 if(countryData[geoId]) showTooltip(event, countryData[geoId]);
             });
 
+        // Основные года
         mapGroup.selectAll(".year-label.main")
             .data(world.features)
             .enter().append("text")
@@ -332,6 +351,20 @@
                 return (countryData[geoId] && countryData[geoId].status === 'independent') ? countryData[geoId].year : "";
             });
 
+        // Названия стран (скрытые до зума)
+        mapGroup.selectAll(".country-name-label")
+            .data(world.features)
+            .enter().append("text")
+            .attr("class", "country-name-label")
+            .attr("transform", function(d) {
+                const centroid = path.centroid(d);
+                return (!isNaN(centroid[0]) && !isNaN(centroid[1])) ? `translate(${centroid[0]}, ${centroid[1] + 8})` : "translate(-1000,-1000)";
+            })
+            .text(d => {
+                const geoId = d.properties.ADM0_A3 || d.properties.GU_A3;
+                return countryData[geoId] ? countryData[geoId].name : "";
+            });
+
         const islands = mapGroup.selectAll(".island-group")
             .data(islandNations)
             .enter().append("g")
@@ -342,17 +375,26 @@
                 if(countryData[d.id]) showTooltip(event, countryData[d.id]);
             });
 
-        islands.append("circle")
-            .attr("r", 5)
-            .attr("fill", d => countryData[d.id] ? getFillStyle(countryData[d.id].metro) : "#eaeaea");
-
-        islands.append("text")
-            .attr("class", "year-label")
-            .attr("y", -8)
+        islands.append("circle").attr("r", 4);
+        islands.append("text").attr("class", "year-label").attr("y", -6)
             .text(d => (countryData[d.id] && countryData[d.id].status === 'independent') ? countryData[d.id].year : "");
+            
+        islands.append("text").attr("class", "country-name-label").attr("y", 6)
+            .text(d => countryData[d.id] ? countryData[d.id].name : "");
 
-        updateVisibility();
+        updateMapColors();
+        updateLegend();
     });
+
+    function updateMapColors() {
+        const mode = d3.select('input[name="color-mode"]:checked').node().value;
+        mapGroup.selectAll(".country").attr("fill", d => {
+            const geoId = d.properties.ADM0_A3 || d.properties.GU_A3;
+            return getFillStyle(geoId, mode);
+        });
+        mapGroup.selectAll(".island-marker circle").attr("fill", d => getFillStyle(d.id, mode));
+        updateLegend();
+    }
 
     function updateVisibility() {
         const showIndep = d3.select("#toggle-independent").property("checked");
@@ -360,30 +402,18 @@
 
         const isVisible = (geoId) => {
             const data = countryData[geoId];
-            if (!data) return false;
+            if (!data) return true; // Фон оставляем
             if (data.status === "independent" && !showIndep) return false;
             if (data.status === "dependent" && !showDep) return false;
             return true;
         };
 
-        mapGroup.selectAll(".country")
-            .style("display", d => {
-                const geoId = d.properties.ADM0_A3 || d.properties.GU_A3;
-                if (!countryData[geoId]) return "block"; 
-                return isVisible(geoId) ? "block" : "none";
-            });
-            
-        mapGroup.selectAll(".year-label.main")
-            .style("display", d => {
-                const geoId = d.id || d.properties?.ADM0_A3 || d.properties?.GU_A3;
-                if (!countryData[geoId]) return "none";
-                return isVisible(geoId) ? "block" : "none";
-            });
-
-        mapGroup.selectAll(".island-marker")
-            .style("display", d => isVisible(d.id) ? "block" : "none");
+        mapGroup.selectAll(".country").style("display", d => isVisible(d.properties.ADM0_A3 || d.properties.GU_A3) ? "block" : "none");
+        mapGroup.selectAll(".year-label.main").style("display", d => isVisible(d.properties?.ADM0_A3 || d.properties?.GU_A3) ? "block" : "none");
+        mapGroup.selectAll(".island-marker").style("display", d => isVisible(d.id) ? "block" : "none");
     }
 
+    d3.selectAll('input[name="color-mode"]').on("change", updateMapColors);
     d3.select("#toggle-independent").on("change", updateVisibility);
     d3.select("#toggle-dependent").on("change", updateVisibility);
 </script>
