@@ -401,6 +401,19 @@ const zoom = d3.zoom().scaleExtent([0.8, 8]).on("zoom", function(event) {
 });
 svg.call(zoom);
 
+// Обновленная функция изменения размеров окна (пересчитывает рамки)
+function resizeMap() {
+    const navHeight = document.getElementById('top-nav').offsetHeight;
+    const w = window.innerWidth;
+    const h = window.innerHeight - navHeight;
+    svg.attr("width", w).attr("height", h);
+    
+    // Устанавливаем границы перемещения равными размеру экрана
+    zoom.translateExtent([[0, 0], [w, h]]);
+}
+window.addEventListener('resize', resizeMap);
+resizeMap();
+
 let geojsonData = [];
 
 function updateMapVisuals() {
