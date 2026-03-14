@@ -68,7 +68,7 @@
             position: absolute; background: rgba(255, 255, 255, 0.95);
             border: 1px solid var(--border-color); padding: 12px; border-radius: 6px;
             pointer-events: none; opacity: 0; font-size: 13px;
-            box-shadow: 0px 4px 12px rgba(0,0,0,0.1); max-width: 280px; z-index: 10;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.1); max-width: 320px; z-index: 10;
         }
         .tooltip-title { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 16px; margin-bottom: 8px; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 4px;}
         .tooltip-row { margin-bottom: 4px; line-height: 1.3; }
@@ -130,7 +130,8 @@
 const metropoleColors = {
     "Испания": "#f5d142", "Великобритания": "#f54242", "Португалия": "#42f563",
     "Франция": "#4287f5", "Нидерланды": "#42d4f5", "США": "#ff99cc",
-    "Дания": "#ffd700", "Колумбия": "#e1b12c", "Бразилия": "#4cd137", "Гаити": "#9c88ff"
+    "Дания": "#ffd700", "Колумбия": "#e1b12c", "Бразилия": "#4cd137", "Гаити": "#9c88ff",
+    "Мальтийский орден": "#e84393", "Швеция": "#a1caf1", "Аргентина": "#74b9ff"
 };
 
 const subregionColors = {
@@ -139,65 +140,61 @@ const subregionColors = {
     "Андские страны": "#ff7979", "Ла-Платские страны": "#6a89cc"
 };
 
+// Строго по документу пользователя
 const countryData = {
     "MEX": { name: "Мексика", capital: "Мехико", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Мексика" },
     "GTM": { name: "Гватемала", capital: "Гватемала", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
-    "BLZ": { name: "Белиз", capital: "Бельмопан", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1798), Великобритания (до 1981)", year: "1981", subregion: "Центральная Америка" },
-    "SLV": { name: "Сальвадор", capital: "Сан-Сальвадор", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
     "HND": { name: "Гондурас", capital: "Тегусигальпа", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
-    "NIC": { name: "Никарагуа", capital: "Манагуа", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
     "CRI": { name: "Коста-Рика", capital: "Сан-Хосе", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
+    "NIC": { name: "Никарагуа", capital: "Манагуа", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
     "PAN": { name: "Панама", capital: "Панама", metro: ["Испания", "Колумбия"], metro_text: "Испания (до 1821), Колумбия (до 1903)", year: "1903", subregion: "Центральная Америка" },
-    
-    "VEN": { name: "Венесуэла", capital: "Каракас", metro: ["Испания"], metro_text: "Испания (до 1811)", year: "1811", subregion: "Андские страны" },
-    "COL": { name: "Колумбия", capital: "Богота", metro: ["Испания"], metro_text: "Испания (до 1819)", year: "1819", subregion: "Андские страны" },
-    "ECU": { name: "Эквадор", capital: "Кито", metro: ["Испания"], metro_text: "Испания (до 1822)", year: "1822", subregion: "Андские страны" },
-    "PER": { name: "Перу", capital: "Лима", metro: ["Испания"], metro_text: "Испания (до 1824)", year: "1824", subregion: "Андские страны" },
-    "BOL": { name: "Боливия", capital: "Сукре", metro: ["Испания"], metro_text: "Испания (до 1825)", year: "1825", subregion: "Андские страны" },
-    "CHL": { name: "Чили", capital: "Сантьяго", metro: ["Испания"], metro_text: "Испания (до 1818)", year: "1818", subregion: "Андские страны" },
-    
-    "GUY": { name: "Гайана", capital: "Джорджтаун", metro: ["Нидерланды", "Великобритания"], metro_text: "Нидерланды (до 1814), Великобритания (до 1966)", year: "1966", subregion: "Гуаяна" },
-    "SUR": { name: "Суринам", capital: "Парамарибо", metro: ["Великобритания", "Нидерланды"], metro_text: "Великобритания (до 1814), Нидерланды (до 1975)", year: "1975", subregion: "Гуаяна" },
-    "GUF": { name: "Гвиана (Фр.)", capital: "Кайенна", metro: ["Португалия", "Франция"], metro_text: "Португалия (до 1817), Франция (с 1817)", year: "Завис.", subregion: "Гуаяна" },
-    
-    "BRA": { name: "Бразилия", capital: "Бразилиа", metro: ["Португалия"], metro_text: "Португалия (до 1822)", year: "1822", subregion: "Ла-Платские страны" },
-    "PRY": { name: "Парагвай", capital: "Асунсьон", metro: ["Испания"], metro_text: "Испания (до 1811)", year: "1811", subregion: "Ла-Платские страны" },
-    "URY": { name: "Уругвай", capital: "Монтевидео", metro: ["Испания", "Португалия", "Бразилия"], metro_text: "Испания (до 1814), Португалия (до 1824), Бразилия (до 1828)", year: "1828", subregion: "Ла-Платские страны" },
-    "ARG": { name: "Аргентина", capital: "Буэнос-Айрес", metro: ["Испания"], metro_text: "Испания (до 1816)", year: "1816", subregion: "Ла-Платские страны" },
-    "FLK": { name: "Фолклендские Острова", capital: "Стэнли", metro: ["Великобритания"], metro_text: "Великобритания (с 1833), спор. с Аргентиной", year: "Завис.", subregion: "Ла-Платские страны" },
-    
+    "SLV": { name: "Сальвадор", capital: "Сан-Сальвадор", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
+    "HTI": { name: "Гаити", capital: "Порт-о-Пренс", metro: ["Испания", "Франция"], metro_text: "Испания (до 1697), Франция (до 1804)", year: "1804", subregion: "Вест-Индия" },
+    "DOM": { name: "Доминиканская Республика", capital: "Санто-Доминго", metro: ["Франция", "Гаити", "Испания"], metro_text: "Франция (до 1809), Гаити (до 1844), Испания (до 1865)", year: "1865", subregion: "Вест-Индия" },
     "CUB": { name: "Куба", capital: "Гавана", metro: ["Испания", "США"], metro_text: "Испания (до 1898), США (до 1902)", year: "1902", subregion: "Вест-Индия" },
     "JAM": { name: "Ямайка", capital: "Кингстон", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1655), Великобритания (до 1962)", year: "1962", subregion: "Вест-Индия" },
-    "BHS": { name: "Багамы", capital: "Нассау", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1783), Великобритания (до 1973)", year: "1973", subregion: "Вест-Индия" },
-    "HTI": { name: "Гаити", capital: "Порт-о-Пренс", metro: ["Испания", "Франция"], metro_text: "Испания (до 1697), Франция (до 1804)", year: "1804", subregion: "Вест-Индия" },
-    "DOM": { name: "Доминиканская Республика", capital: "Санто-Доминго", metro: ["Испания", "Гаити"], metro_text: "Испания (до 1821), Гаити (до 1844), Испания (до 1865)", year: "1865", subregion: "Вест-Индия" },
-    "PRI": { name: "Пуэрто-Рико", capital: "Сан-Хуан", metro: ["Испания", "США"], metro_text: "Испания (до 1898), США (с 1898)", year: "Завис.", subregion: "Вест-Индия" },
-    "TTO": { name: "Тринидад и Тобаго", capital: "Порт-оф-Спейн", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1797), Великобритания (до 1962)", year: "1962", subregion: "Вест-Индия" }
+    "GUY": { name: "Гайана", capital: "Джорджтаун", metro: ["Нидерланды", "Великобритания"], metro_text: "Нидерланды (до 1814), Великобритания (до 1966)", year: "1966", subregion: "Гуаяна" },
+    "SUR": { name: "Суринам", capital: "Парамарибо", metro: ["Великобритания", "Нидерланды"], metro_text: "Великобритания (до 1667), Нидерланды (до 1975)", year: "1975", subregion: "Гуаяна" },
+    "BOL": { name: "Боливия", capital: "Сукре", metro: ["Испания"], metro_text: "Испания (до 1825)", year: "1825", subregion: "Андские страны" },
+    "VEN": { name: "Венесуэла", capital: "Каракас", metro: ["Испания"], metro_text: "Испания (до 1811)", year: "1811", subregion: "Андские страны" },
+    "COL": { name: "Колумбия", capital: "Богота", metro: ["Испания"], metro_text: "Испания (до 1819)", year: "1819", subregion: "Андские страны" },
+    "PER": { name: "Перу", capital: "Лима", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Андские страны" },
+    "CHL": { name: "Чили", capital: "Сантьяго", metro: ["Испания"], metro_text: "Испания (до 1818)", year: "1818", subregion: "Андские страны" },
+    "ECU": { name: "Эквадор", capital: "Кито", metro: ["Испания"], metro_text: "Испания (до 1822)", year: "1822", subregion: "Андские страны" },
+    "ARG": { name: "Аргентина", capital: "Буэнос-Айрес", metro: ["Испания"], metro_text: "Испания (до 1816)", year: "1816", subregion: "Ла-Платские страны" },
+    "BRA": { name: "Бразилия", capital: "Бразилиа", metro: ["Португалия"], metro_text: "Португалия (до 1822)", year: "1822", subregion: "Ла-Платские страны" },
+    "PRY": { name: "Парагвай", capital: "Асунсьон", metro: ["Испания"], metro_text: "Испания (до 1811)", year: "1811", subregion: "Ла-Платские страны" },
+    "URY": { name: "Уругвай", capital: "Монтевидео", metro: ["Испания", "Португалия", "Бразилия"], metro_text: "Испания (до 1814), Португалия (до 1822), Бразилия (до 1828)", year: "1828", subregion: "Ла-Платские страны" },
+    "GUF": { name: "Гвиана (Фр.)", capital: "Кайенна", metro: ["Нидерланды", "Великобритания", "Португалия", "Франция"], metro_text: "Нидерланды (до 1676), Великобритания (до 1814), Португалия (до 1817), Франция (с 1817 по н.в.)", year: "Завис.", subregion: "Гуаяна" },
+    "FLK": { name: "Фолклендские (Мальвинские) Острова", capital: "Стэнли", metro: ["Франция", "Испания", "Аргентина", "Великобритания"], metro_text: "Франция (до 1767), Испания (до 1811), Аргентина (до 1833), Великобритания (с 1833 по н.в.)", year: "Завис.", subregion: "Ла-Платские страны" },
+    "PRI": { name: "Пуэрто-Рико", capital: "Сан-Хуан", metro: ["Испания", "США"], metro_text: "Испания (до 1898), США (с 1898 по н.в.)", year: "Завис.", subregion: "Вест-Индия" }
 };
 
 const islandNations = [
-    { id: "KNA", coords: [-62.7, 17.3], info: { name: "Сент-Китс и Невис", capital: "Бастер", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1783), Великобритания (до 1983)", year: "1983", subregion: "Вест-Индия" } },
-    { id: "ATG", coords: [-61.8, 17.0], info: { name: "Антигуа и Барбуда", capital: "Сент-Джонс", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1666), Великобритания (до 1981)", year: "1981", subregion: "Вест-Индия" } },
-    { id: "DMA", coords: [-61.3, 15.4], info: { name: "Доминика", capital: "Розо", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1763), Великобритания (до 1978)", year: "1978", subregion: "Вест-Индия" } },
-    { id: "LCA", coords: [-60.9, 13.9], info: { name: "Сент-Люсия", capital: "Кастри", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1814), Великобритания (до 1979)", year: "1979", subregion: "Вест-Индия" } },
+    { id: "ATG", coords: [-61.8, 17.0], info: { name: "Антигуа и Барбуда", capital: "Сент-Джонс", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1632), Великобритания (до 1981)", year: "1981", subregion: "Вест-Индия" } },
+    { id: "BHS", coords: [-77.3, 25.0], info: { name: "Багамские Острова", capital: "Нассау", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1648), Великобритания (до 1973)", year: "1973", subregion: "Вест-Индия" } },
     { id: "BRB", coords: [-59.5, 13.1], info: { name: "Барбадос", capital: "Бриджтаун", metro: ["Великобритания"], metro_text: "Великобритания (до 1966)", year: "1966", subregion: "Вест-Индия" } },
+    { id: "GRD", coords: [-61.6, 12.1], info: { name: "Гренада", capital: "Сент-Джорджес", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1762), Великобритания (до 1974)", year: "1974", subregion: "Вест-Индия" } },
+    { id: "DMA", coords: [-61.3, 15.4], info: { name: "Доминика", capital: "Розо", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1763), Великобритания (до 1978)", year: "1978", subregion: "Вест-Индия" } },
     { id: "VCT", coords: [-61.2, 13.2], info: { name: "Сент-Винсент и Гренадины", capital: "Кингстаун", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1783), Великобритания (до 1979)", year: "1979", subregion: "Вест-Индия" } },
-    { id: "GRD", coords: [-61.6, 12.1], info: { name: "Гренада", capital: "Сент-Джорджес", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1763), Великобритания (до 1974)", year: "1974", subregion: "Вест-Индия" } },
-    { id: "CYM", coords: [-81.3, 19.3], info: { name: "Острова Кайман", capital: "Джорджтаун", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1670), Великобритания (с 1670)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "TCA", coords: [-71.7, 21.7], info: { name: "Тёркс и Кайкос", capital: "Коберн-Таун", metro: ["Франция", "Испания", "Великобритания"], metro_text: "Франция (до 1764), Испания (до 1783), Великобритания (с 1783)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "VIR", coords: [-64.9, 18.3], info: { name: "Виргинские Острова (США)", capital: "Шарлотта-Амалия", metro: ["Дания", "США"], metro_text: "Дания (до 1917), США (с 1917)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "VGB", coords: [-64.6, 18.4], info: { name: "Виргинские Острова (Брит.)", capital: "Роуд-Таун", metro: ["Испания", "Нидерланды", "Великобритания"], metro_text: "Испания (до 1648), Нидерланды (до 1672), Великобритания (с 1672)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "AIA", coords: [-63.0, 18.2], info: { name: "Ангилья", capital: "Валли", metro: ["Великобритания"], metro_text: "Великобритания (с 1650)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "MSR", coords: [-62.2, 16.7], info: { name: "Монтсеррат", capital: "Плимут", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1783), Великобритания (с 1783)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "GLP", coords: [-61.5, 16.2], info: { name: "Гваделупа", capital: "Бас-Тер", metro: ["Великобритания", "Франция"], metro_text: "Великобритания (до 1816), Франция (с 1816)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "MTQ", coords: [-61.0, 14.6], info: { name: "Мартиника", capital: "Фор-де-Франс", metro: ["Великобритания", "Франция"], metro_text: "Великобритания (до 1814), Франция (с 1814)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "BES", coords: [-68.2, 12.1], info: { name: "Карибские Нидерланды", capital: "Кралендейк", metro: ["Испания", "Великобритания", "Нидерланды"], metro_text: "Испания (до 1636), Великобритания (до 1814), Нидерланды (с 1814)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "CUW", coords: [-68.9, 12.1], info: { name: "Кюрасао", capital: "Виллемстад", metro: ["Испания", "Великобритания", "Нидерланды"], metro_text: "Испания (до 1634), Великобритания (до 1815), Нидерланды (с 1815)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "ABW", coords: [-69.9, 12.5], info: { name: "Аруба", capital: "Ораньестад", metro: ["Испания", "Великобритания", "Нидерланды"], metro_text: "Испания (до 1636), Великобритания (до 1816), Нидерланды (с 1816)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "BMU", coords: [-64.7, 32.3], info: { name: "Бермудские Острова", capital: "Гамильтон", metro: ["Великобритания"], metro_text: "Великобритания (с 1612)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "MAF", coords: [-63.0, 18.07], info: { name: "Сен-Мартен", capital: "Мариго", metro: ["Франция"], metro_text: "Франция (с 1648)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "SXM", coords: [-63.05, 18.02], info: { name: "Синт-Мартен", capital: "Филипсбург", metro: ["Нидерланды"], metro_text: "Нидерланды (с 1648)", year: "Завис.", subregion: "Вест-Индия" } },
-    { id: "BLM", coords: [-62.8, 17.9], info: { name: "Сен-Бартельми", capital: "Густавия", metro: ["Франция"], metro_text: "Франция (с 1648)", year: "Завис.", subregion: "Вест-Индия" } }
+    { id: "KNA", coords: [-62.7, 17.3], info: { name: "Сент-Китс и Невис", capital: "Бастер", metro: ["Испания", "Франция", "Великобритания"], metro_text: "Испания (до 1625), Франция (до 1713), Великобритания (до 1983)", year: "1983", subregion: "Вест-Индия" } },
+    { id: "LCA", coords: [-60.9, 13.9], info: { name: "Сент-Люсия", capital: "Кастри", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1814), Великобритания (до 1979)", year: "1979", subregion: "Вест-Индия" } },
+    { id: "TTO", coords: [-61.5, 10.6], info: { name: "Тринидад и Тобаго", capital: "Порт-оф-Спейн", metro: ["Испания", "Нидерланды", "Франция", "Великобритания"], metro_text: "Испания (до 1797), Нидерланды (до 1677), Франция (до 1762), Великобритания (до 1962)", year: "1962", subregion: "Вест-Индия" } },
+    { id: "AIA", coords: [-63.0, 18.2], info: { name: "Ангилья", capital: "Валли", metro: ["Великобритания"], metro_text: "Великобритания (с 1650 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "ABW", coords: [-69.9, 12.5], info: { name: "Аруба", capital: "Ораньестад", metro: ["Испания", "Нидерланды"], metro_text: "Испания (до 1636), Нидерланды (с 1636 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "BMU", coords: [-64.7, 32.3], info: { name: "Бермудские Острова", capital: "Гамильтон", metro: ["Великобритания"], metro_text: "Великобритания (с 1612 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "VGB", coords: [-64.6, 18.4], info: { name: "Виргинские Острова (Брит.)", capital: "Роуд-Таун", metro: ["Нидерланды", "Великобритания"], metro_text: "Нидерланды (до 1672), Великобритания (с 1672 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "VIR", coords: [-64.9, 18.3], info: { name: "Виргинские Острова (США)", capital: "Шарлотта-Амалия", metro: ["Испания", "Нидерланды", "Мальтийский орден", "Франция", "Дания", "США"], metro_text: "Испания (до 1625), Нидерланды (до 1650), Мальтийский орден (до 1665), Франция (до 1733), Дания (до 1917), США (с 1917 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "GLP", coords: [-61.5, 16.2], info: { name: "Гваделупа", capital: "Бастер", metro: ["Испания", "Швеция", "Великобритания", "Франция"], metro_text: "Испания (до 1635), Швеция (до 1814), Великобритания (до 1816), Франция (с 1816 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "CYM", coords: [-81.3, 19.3], info: { name: "Острова Кайман", capital: "Джорджтаун", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1670), Великобритания (с 1670 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "BES", coords: [-68.2, 12.1], info: { name: "Карибские Нидерланды", capital: "Кралендейк, Ораньестад, Боттом", metro: ["Испания", "Великобритания", "Нидерланды"], metro_text: "Испания (до 1633), Великобритания (до 1816), Нидерланды (с 1816 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "CUW", coords: [-68.9, 12.1], info: { name: "Кюрасао", capital: "Виллемстад", metro: ["Испания", "Великобритания", "Нидерланды"], metro_text: "Испания (до 1634), Великобритания (до 1815), Нидерланды (с 1815 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "MTQ", coords: [-61.0, 14.6], info: { name: "Мартиника", capital: "Фор-де-Франс", metro: ["Великобритания", "Франция"], metro_text: "Великобритания (до 1814), Франция (с 1814 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "MSR", coords: [-62.2, 16.7], info: { name: "Монтсеррат", capital: "Плимут", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1783), Великобритания (с 1783 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "BLM", coords: [-62.8, 17.9], info: { name: "Сен-Бартельми", capital: "Густавия", metro: ["Швеция", "Франция"], metro_text: "Швеция (до 1878), Франция (с 1878 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "MAF", coords: [-63.0, 18.07], info: { name: "Сен-Мартен", capital: "Мариго", metro: ["Нидерланды", "Франция"], metro_text: "Нидерланды (до 1648), Франция (с 1648 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "SXM", coords: [-63.05, 18.02], info: { name: "Синт-Мартен", capital: "Филипсбург", metro: ["Испания", "Нидерланды"], metro_text: "Испания (до 1648), Нидерланды (с 1648 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "TCA", coords: [-71.7, 21.7], info: { name: "Тёркс и Кайкос", capital: "Кокберн-Таун", metro: ["Испания", "Франция", "Великобритания"], metro_text: "Испания (до 1681), Франция (до 1783), Великобритания (с 1783 по н.в.)", year: "Завис.", subregion: "Вест-Индия" } }
 ];
 
 let currentMode = "independence";
@@ -278,18 +275,15 @@ const projection = d3.geoMercator();
 const path = d3.geoPath().projection(projection);
 const tooltip = d3.select("#tooltip");
 
-// Динамическое изменение масштаба пунсонов и текста
 const zoom = d3.zoom().scaleExtent([1, 15]).on("zoom", function(event) {
     const k = event.transform.k;
     mapGroup.attr("transform", event.transform);
     mapGroup.selectAll(".country").style("stroke-width", 0.5 / k + "px");
     
-    // Радиус пунсонов динамически меняется, чтобы не было "каши"
     mapGroup.selectAll(".island-marker")
         .attr("r", 3 / Math.max(1, k * 0.4))
         .style("stroke-width", 0.8 / k + "px");
 
-    // Подписи островов показываются ТОЛЬКО при сильном приближении (k > 3.5)
     mapGroup.selectAll(".island-label")
         .style("font-size", (8 / Math.max(1, k * 0.5)) + "px")
         .style("opacity", k > 3.5 ? 1 : 0);
@@ -336,10 +330,10 @@ function showTooltip(event, info) {
     
     let tooltipHtml = `<div class="tooltip-title">${info.name}</div><div class="tooltip-row"><b>Субрегион:</b> ${info.subregion}</div>`;
     if (currentMode === "independence") {
-        tooltipHtml += `<div class="tooltip-row"><b>Год независимости:</b> ${info.year}</div>
-                        <div class="tooltip-row"><b>Метрополия:</b> ${info.metro_text}</div>`;
+        tooltipHtml += `<div class="tooltip-row"><b>Год обретения независимости:</b> ${info.year}</div>
+                        <div class="tooltip-row"><b>Метрополии:</b> ${info.metro_text}</div>`;
     } else {
-        tooltipHtml += `<div class="tooltip-row"><b>Столица:</b> ${info.capital}</div>`;
+        tooltipHtml += `<div class="tooltip-row"><b>Столица (Административный центр):</b> ${info.capital}</div>`;
     }
     
     tooltip.html(tooltipHtml).style("left", Math.max(10, xPos) + "px").style("top", Math.max(10, yPos) + "px");
@@ -353,13 +347,12 @@ function resolveGeoId(properties) {
     for (let id of idCandidates) {
         if (!id || id === "-99") continue;
         if (countryData[id]) return id;
-        // ХАК: Присваиваем полигону Франции (FRA) идентификатор Гвианы (GUF)
         if (id === "FRA") return "GUF"; 
     }
     const name = properties.NAME || properties.ADMIN;
     if (name === "Dominican Republic") return "DOM";
     if (name === "Falkland Islands") return "FLK";
-    if (name === "France") return "GUF"; // Запасной вариант для Франции
+    if (name === "France") return "GUF"; 
     return null;
 }
 
@@ -367,29 +360,41 @@ let geojsonData = [];
 
 function updateMapVisuals() {
     updateLegend();
-    mapGroup.selectAll(".country").attr("fill", d => getFillStyle(countryData[resolveGeoId(d.properties)], resolveGeoId(d.properties)));
+    mapGroup.selectAll(".country").attr("fill", d => {
+        const geoId = resolveGeoId(d.properties);
+        return countryData[geoId] ? getFillStyle(countryData[geoId], geoId) : "#ececec";
+    });
     mapGroup.selectAll(".island-marker").attr("fill", d => getFillStyle(d.info, d.id));
-    mapGroup.selectAll(".map-label").text(d => currentMode === "independence" ? countryData[resolveGeoId(d.properties)].year.split('/')[0].split(' ')[0] : "");
+    
+    mapGroup.selectAll(".map-label").text(d => {
+        const geoId = resolveGeoId(d.properties);
+        if (!countryData[geoId]) return "";
+        return currentMode === "independence" ? countryData[geoId].year.split('/')[0].split(' ')[0] : "";
+    });
     mapGroup.selectAll(".island-label").text(d => currentMode === "independence" ? d.info.year.split('/')[0].split(' ')[0] : "");
 }
 
 d3.json("ne_110m_admin_0_countries.geojson?v=2").then(world => {
     geojsonData = world.features.filter(d => resolveGeoId(d.properties) !== null);
     
-    // Ограничиваем Bounding Box строго координатами Латинской Америки,
-    // чтобы "присоединенная" Франция (Европа) не отдаляла камеру.
     const latAmBbox = {
         type: "FeatureCollection",
         features: [
-            {type: "Feature", geometry: {type: "Point", coordinates: [-118, 32]}}, // Мексика (СЗ)
-            {type: "Feature", geometry: {type: "Point", coordinates: [-34, -56]}}  // Аргентина/Бразилия (ЮВ)
+            {type: "Feature", geometry: {type: "Point", coordinates: [-118, 32]}}, 
+            {type: "Feature", geometry: {type: "Point", coordinates: [-34, -56]}}  
         ]
     };
     projection.fitExtent([[30, 30], [window.innerWidth - 30, window.innerHeight - document.getElementById('top-nav').offsetHeight - 30]], latAmBbox);
 
     mapGroup.selectAll("path").data(geojsonData).enter().append("path").attr("d", path).attr("class", "country")
-        .on("click", (event, d) => { event.stopPropagation(); showTooltip(event, countryData[resolveGeoId(d.properties)]); })
-        .on("touchstart", (event, d) => { event.stopPropagation(); showTooltip(event, countryData[resolveGeoId(d.properties)]); });
+        .on("click", (event, d) => {
+            const geoId = resolveGeoId(d.properties);
+            if(countryData[geoId]) { event.stopPropagation(); showTooltip(event, countryData[geoId]); }
+        })
+        .on("touchstart", (event, d) => {
+            const geoId = resolveGeoId(d.properties);
+            if(countryData[geoId]) { event.stopPropagation(); showTooltip(event, countryData[geoId]); }
+        });
 
     mapGroup.selectAll(".map-label").data(geojsonData).enter().append("text").attr("class", "map-label").attr("transform", d => {
             const centroid = path.centroid(d);
