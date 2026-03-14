@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Латинская Америка | Исторический атлас</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #fcfbf9;
+            --nav-bg: #ffffff;
+            --text-main: #2c3e50;
+            --border-color: #e2dfd6;
+        }
+
+        body { 
+            margin: 0; padding: 0; 
+            background-color: var(--bg-color); 
+            font-family: 'Inter', sans-serif; 
+            overflow: hidden; 
+            touch-action: none;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Верхняя панель навигации */
+        #top-nav {
+            background-color: var(--nav-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            z-index: 20;
+        }
+
+        .back-btn {
+            text-decoration: none;
+            color: var(--text-main);
+            font-weight: 500;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .back-btn:hover { background: var(--bg-color); }
+
+        .mode-selector {
+            display: flex;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .mode-btn {
+            border: none;
+            background: none;
+            padding: 8px 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+            color: #5c6b7a;
+            transition: all 0.2s;
+        }
+        .mode-btn.active {
+            background: var(--text-main);
+            color: white;
+            font-weight: 500;
+        }
+
+        /* Контейнер карты */
+        #map-container { flex-grow: 1; width: 100vw; display: block; background-color: #eaf6f6; }
+        
+        .country { stroke: #333; stroke-width: 0.5px; transition: opacity 0.2s, fill 0.3s; cursor: pointer; }
+        .country:hover { opacity: 0.7; }
+        .island-marker { stroke: #333; stroke-width: 1px; cursor: pointer; transition: opacity 0.2s, fill 0.3s; }
+        .island-marker:hover { opacity: 0.7; }
+        
+        .map-label { font-size: 8px; font-weight: bold; fill: #111; text-anchor: middle; pointer-events: none; text-shadow: 1px 1px 2px rgba(255,255,255,0.8), -1px -1px 2px rgba(255,255,255,0.8); }
+        .island-label { font-size: 8px; font-weight: bold; fill: #111; text-anchor: start; pointer-events: none; text-shadow: 1px 1px 2px rgba(255,255,255,0.8), -1px -1px 2px rgba(255,255,255,0.8); }
+        
+        #tooltip {
+            position: absolute; background: rgba(255, 255, 255, 0.95);
+            border: 1px solid var(--border-color); padding: 12px; border-radius: 6px;
+            pointer-events: none; opacity: 0; font-size: 13px;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.1); max-width: 280px; z-index: 10;
+        }
+        .tooltip-title { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 16px; margin-bottom: 8px; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 4px;}
+        .tooltip-row { margin-bottom: 4px; line-height: 1.3; }
+
+        /* Легенда */
+        #legend {
+            position: absolute; bottom: 20px; left: 10px;
+            background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-color);
+            border-radius: 6px; font-size: 12px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+            z-index: 5; width: 220px;
+        }
+        
+        #legend-header {
+            font-family: 'Inter', sans-serif; font-weight: 500; font-size: 13px;
+            text-align: center; background: var(--nav-bg);
+            border-bottom: 1px solid var(--border-color); border-radius: 6px 6px 0 0;
+            padding: 10px; user-select: none; display: flex; justify-content: space-between; align-items: center;
+            cursor: grab; touch-action: none;
+        }
+        #legend-header:active { cursor: grabbing; }
+        
+        #legend-content { padding: 10px; max-height: 40vh; overflow-y: auto; transition: max-height 0.3s; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 6px; }
+        .legend-color { width: 14px; height: 14px; margin-right: 8px; border: 1px solid rgba(0,0,0,0.2); border-radius: 3px; flex-shrink: 0; }
+        .legend-pattern { width: 14px; height: 14px; margin-right: 8px; border: 1px solid rgba(0,0,0,0.2); border-radius: 3px; flex-shrink: 0; background: repeating-linear-gradient(45deg, #ccc, #ccc 3px, #fff 3px, #fff 6px); }
+
+        /* Сворачивание легенды */
+        #legend.collapsed #legend-content { max-height: 0; padding: 0 10px; overflow: hidden; border: none; }
+        .toggle-icon { transition: transform 0.3s; }
+        #legend.collapsed .toggle-icon { transform: rotate(180deg); }
+
+        /* Адаптив для мобильных */
+        @media (max-width: 600px) {
+            #top-nav { padding: 8px 10px; flex-direction: column; gap: 10px; }
+            .mode-btn { padding: 6px 12px; font-size: 12px; }
+            #legend { bottom: 0; left: 0 !important; top: auto !important; width: 100%; border-radius: 12px 12px 0 0; border-left: none; border-right: none; border-bottom: none; }
+            #legend-header { border-radius: 12px 12px 0 0; padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav id="top-nav">
+    <a href="index.html" class="back-btn">← В меню</a>
+    <div class="mode-selector">
+        <button class="mode-btn active" data-mode="independence">Независимость</button>
+        <button class="mode-btn" data-mode="subregions">Субрегионы</button>
+    </div>
+</nav>
+
+<div id="tooltip"></div>
+
+<div id="legend">
+    <div id="legend-header"><span>≡ Условные обозначения</span><span class="toggle-icon">▲</span></div>
+    <div id="legend-content"><div id="legend-items"></div></div>
+</div>
+
+<svg id="map-container"></svg>
+
+<script>
+// --- ДАННЫЕ И ЦВЕТА (Латинская Америка) ---
+const metropoleColors = {
+    "Испания": "#f5d142", "Великобритания": "#f54242", "Португалия": "#42f563",
+    "Франция": "#4287f5", "Нидерланды": "#42d4f5", "США": "#ff99cc",
+    "Дания": "#ffd700", "Колумбия": "#e1b12c", "Бразилия": "#4cd137", "Гаити": "#9c88ff"
+};
+
+const subregionColors = {
+    "Мексика": "#fAD390", "Центральная Америка": "#f8c291",
+    "Вест-Индия": "#82ccdd", "Гуаяна": "#b8e994", 
+    "Андские страны": "#ff7979", "Ла-Платские страны": "#6a89cc"
+};
+
+const countryData = {
+    "MEX": { name: "Мексика", capital: "Мехико", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Мексика" },
+    "GTM": { name: "Гватемала", capital: "Гватемала", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
+    "BLZ": { name: "Белиз", capital: "Бельмопан", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1798), Великобритания (до 1981)", year: "1981", subregion: "Центральная Америка" },
+    "SLV": { name: "Сальвадор", capital: "Сан-Сальвадор", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
+    "HND": { name: "Гондурас", capital: "Тегусигальпа", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
+    "NIC": { name: "Никарагуа", capital: "Манагуа", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
+    "CRI": { name: "Коста-Рика", capital: "Сан-Хосе", metro: ["Испания"], metro_text: "Испания (до 1821)", year: "1821", subregion: "Центральная Америка" },
+    "PAN": { name: "Панама", capital: "Панама", metro: ["Испания", "Колумбия"], metro_text: "Испания (до 1821), Колумбия (до 1903)", year: "1903", subregion: "Центральная Америка" },
+    
+    "VEN": { name: "Венесуэла", capital: "Каракас", metro: ["Испания"], metro_text: "Испания (до 1811)", year: "1811", subregion: "Андские страны" },
+    "COL": { name: "Колумбия", capital: "Богота", metro: ["Испания"], metro_text: "Испания (до 1819)", year: "1819", subregion: "Андские страны" },
+    "ECU": { name: "Эквадор", capital: "Кито", metro: ["Испания"], metro_text: "Испания (до 1822)", year: "1822", subregion: "Андские страны" },
+    "PER": { name: "Перу", capital: "Лима", metro: ["Испания"], metro_text: "Испания (до 1824)", year: "1824", subregion: "Андские страны" },
+    "BOL": { name: "Боливия", capital: "Сукре", metro: ["Испания"], metro_text: "Испания (до 1825)", year: "1825", subregion: "Андские страны" },
+    "CHL": { name: "Чили", capital: "Сантьяго", metro: ["Испания"], metro_text: "Испания (до 1818)", year: "1818", subregion: "Андские страны" },
+    
+    "GUY": { name: "Гайана", capital: "Джорджтаун", metro: ["Нидерланды", "Великобритания"], metro_text: "Нидерланды (до 1814), Великобритания (до 1966)", year: "1966", subregion: "Гуаяна" },
+    "SUR": { name: "Суринам", capital: "Парамарибо", metro: ["Великобритания", "Нидерланды"], metro_text: "Великобритания (до 1814), Нидерланды (до 1975)", year: "1975", subregion: "Гуаяна" },
+    "GUF": { name: "Гвиана (Фр.)", capital: "Кайенна", metro: ["Португалия", "Франция"], metro_text: "Португалия (до 1817), Франция (с 1817)", year: "Завис.", subregion: "Гуаяна" },
+    
+    "BRA": { name: "Бразилия", capital: "Бразилиа", metro: ["Португалия"], metro_text: "Португалия (до 1822)", year: "1822", subregion: "Ла-Платские страны" },
+    "PRY": { name: "Парагвай", capital: "Асунсьон", metro: ["Испания"], metro_text: "Испания (до 1811)", year: "1811", subregion: "Ла-Платские страны" },
+    "URY": { name: "Уругвай", capital: "Монтевидео", metro: ["Испания", "Португалия", "Бразилия"], metro_text: "Испания (до 1814), Португалия (до 1824), Бразилия (до 1828)", year: "1828", subregion: "Ла-Платские страны" },
+    "ARG": { name: "Аргентина", capital: "Буэнос-Айрес", metro: ["Испания"], metro_text: "Испания (до 1816)", year: "1816", subregion: "Ла-Платские страны" },
+    "FLK": { name: "Фолклендские Острова", capital: "Стэнли", metro: ["Великобритания"], metro_text: "Великобритания (с 1833), спор. с Аргентиной", year: "Завис.", subregion: "Ла-Платские страны" },
+    
+    "CUB": { name: "Куба", capital: "Гавана", metro: ["Испания", "США"], metro_text: "Испания (до 1898), США (до 1902)", year: "1902", subregion: "Вест-Индия" },
+    "JAM": { name: "Ямайка", capital: "Кингстон", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1655), Великобритания (до 1962)", year: "1962", subregion: "Вест-Индия" },
+    "BHS": { name: "Багамы", capital: "Нассау", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1783), Великобритания (до 1973)", year: "1973", subregion: "Вест-Индия" },
+    "HTI": { name: "Гаити", capital: "Порт-о-Пренс", metro: ["Испания", "Франция"], metro_text: "Испания (до 1697), Франция (до 1804)", year: "1804", subregion: "Вест-Индия" },
+    "DOM": { name: "Доминиканская Республика", capital: "Санто-Доминго", metro: ["Испания", "Гаити"], metro_text: "Испания (до 1821), Гаити (до 1844), Испания (до 1865)", year: "1865", subregion: "Вест-Индия" },
+    "PRI": { name: "Пуэрто-Рико", capital: "Сан-Хуан", metro: ["Испания", "США"], metro_text: "Испания (до 1898), США (с 1898)", year: "Завис.", subregion: "Вест-Индия" },
+    "TTO": { name: "Тринидад и Тобаго", capital: "Порт-оф-Спейн", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1797), Великобритания (до 1962)", year: "1962", subregion: "Вест-Индия" }
+};
+
+// Островные и малые государства (координаты [долгота, широта])
+const islandNations = [
+    { id: "KNA", coords: [-62.7, 17.3], info: { name: "Сент-Китс и Невис", capital: "Бастер", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1783), Великобритания (до 1983)", year: "1983", subregion: "Вест-Индия" } },
+    { id: "ATG", coords: [-61.8, 17.0], info: { name: "Антигуа и Барбуда", capital: "Сент-Джонс", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1666), Великобритания (до 1981)", year: "1981", subregion: "Вест-Индия" } },
+    { id: "DMA", coords: [-61.3, 15.4], info: { name: "Доминика", capital: "Розо", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1763), Великобритания (до 1978)", year: "1978", subregion: "Вест-Индия" } },
+    { id: "LCA", coords: [-60.9, 13.9], info: { name: "Сент-Люсия", capital: "Кастри", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1814), Великобритания (до 1979)", year: "1979", subregion: "Вест-Индия" } },
+    { id: "BRB", coords: [-59.5, 13.1], info: { name: "Барбадос", capital: "Бриджтаун", metro: ["Великобритания"], metro_text: "Великобритания (до 1966)", year: "1966", subregion: "Вест-Индия" } },
+    { id: "VCT", coords: [-61.2, 13.2], info: { name: "Сент-Винсент и Гренадины", capital: "Кингстаун", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1783), Великобритания (до 1979)", year: "1979", subregion: "Вест-Индия" } },
+    { id: "GRD", coords: [-61.6, 12.1], info: { name: "Гренада", capital: "Сент-Джорджес", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1763), Великобритания (до 1974)", year: "1974", subregion: "Вест-Индия" } },
+    { id: "CYM", coords: [-81.3, 19.3], info: { name: "Острова Кайман", capital: "Джорджтаун", metro: ["Испания", "Великобритания"], metro_text: "Испания (до 1670), Великобритания (с 1670)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "TCA", coords: [-71.7, 21.7], info: { name: "Тёркс и Кайкос", capital: "Коберн-Таун", metro: ["Франция", "Испания", "Великобритания"], metro_text: "Франция (до 1764), Испания (до 1783), Великобритания (с 1783)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "VIR", coords: [-64.9, 18.3], info: { name: "Виргинские Острова (США)", capital: "Шарлотта-Амалия", metro: ["Дания", "США"], metro_text: "Дания (до 1917), США (с 1917)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "VGB", coords: [-64.6, 18.4], info: { name: "Виргинские Острова (Брит.)", capital: "Роуд-Таун", metro: ["Испания", "Нидерланды", "Великобритания"], metro_text: "Испания (до 1648), Нидерланды (до 1672), Великобритания (с 1672)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "AIA", coords: [-63.0, 18.2], info: { name: "Ангилья", capital: "Валли", metro: ["Великобритания"], metro_text: "Великобритания (с 1650)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "MSR", coords: [-62.2, 16.7], info: { name: "Монтсеррат", capital: "Плимут", metro: ["Франция", "Великобритания"], metro_text: "Франция (до 1783), Великобритания (с 1783)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "GLP", coords: [-61.5, 16.2], info: { name: "Гваделупа", capital: "Бас-Тер", metro: ["Великобритания", "Франция"], metro_text: "Великобритания (до 1816), Франция (с 1816)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "MTQ", coords: [-61.0, 14.6], info: { name: "Мартиника", capital: "Фор-де-Франс", metro: ["Великобритания", "Франция"], metro_text: "Великобритания (до 1814), Франция (с 1814)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "BES", coords: [-68.2, 12.1], info: { name: "Карибские Нидерланды", capital: "Кралендейк", metro: ["Испания", "Великобритания", "Нидерланды"], metro_text: "Испания (до 1636), Великобритания (до 1814), Нидерланды (с 1814)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "CUW", coords: [-68.9, 12.1], info: { name: "Кюрасао", capital: "Виллемстад", metro: ["Испания", "Великобритания", "Нидерланды"], metro_text: "Испания (до 1634), Великобритания (до 1815), Нидерланды (с 1815)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "ABW", coords: [-69.9, 12.5], info: { name: "Аруба", capital: "Ораньестад", metro: ["Испания", "Великобритания", "Нидерланды"], metro_text: "Испания (до 1636), Великобритания (до 1816), Нидерланды (с 1816)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "BMU", coords: [-64.7, 32.3], info: { name: "Бермудские Острова", capital: "Гамильтон", metro: ["Великобритания"], metro_text: "Великобритания (с 1612)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "MAF", coords: [-63.0, 18.07], info: { name: "Сен-Мартен", capital: "Мариго", metro: ["Франция"], metro_text: "Франция (с 1648)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "SXM", coords: [-63.05, 18.02], info: { name: "Синт-Мартен", capital: "Филипсбург", metro: ["Нидерланды"], metro_text: "Нидерланды (с 1648)", year: "Завис.", subregion: "Вест-Индия" } },
+    { id: "BLM", coords: [-62.8, 17.9], info: { name: "Сен-Бартельми", capital: "Густавия", metro: ["Франция"], metro_text: "Франция (с 1648)", year: "Завис.", subregion: "Вест-Индия" } }
+];
+
+let currentMode = "independence";
+
+// --- ЛОГИКА ЛЕГЕНДЫ И КНОПОК ---
+const legendHeader = document.getElementById('legend-header');
+const legendEl = document.getElementById('legend');
+const modeBtns = document.querySelectorAll('.mode-btn');
+
+modeBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        modeBtns.forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        currentMode = e.target.dataset.mode;
+        updateMapVisuals();
+    });
+});
+
+let isDragging = false;
+let isMoved = false;
+let startX, startY, initialLeft, initialTop;
+
+legendHeader.addEventListener("pointerdown", (e) => {
+    if (window.innerWidth <= 600) return; 
+    isDragging = true; isMoved = false; 
+    startX = e.clientX; startY = e.clientY;
+    
+    const rect = legendEl.getBoundingClientRect();
+    legendEl.style.bottom = "auto"; legendEl.style.right = "auto";
+    initialLeft = rect.left; initialTop = rect.top;
+    
+    legendEl.style.left = initialLeft + "px"; legendEl.style.top = initialTop + "px";
+    legendHeader.setPointerCapture(e.pointerId);
+});
+
+legendHeader.addEventListener("pointermove", (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX; const dy = e.clientY - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isMoved = true;
+    
+    if (isMoved) {
+        let newX = Math.max(0, Math.min(window.innerWidth - legendEl.offsetWidth, initialLeft + dx));
+        let newY = Math.max(document.getElementById('top-nav').offsetHeight, Math.min(window.innerHeight - legendEl.offsetHeight, initialTop + dy));
+        legendEl.style.left = newX + "px"; legendEl.style.top = newY + "px";
+    }
+});
+
+legendHeader.addEventListener("pointerup", (e) => {
+    if (window.innerWidth > 600) {
+        isDragging = false; legendHeader.releasePointerCapture(e.pointerId);
+        if (!isMoved) legendEl.classList.toggle('collapsed');
+    }
+});
+
+legendHeader.addEventListener('click', () => { if(window.innerWidth <= 600) legendEl.classList.toggle('collapsed'); });
+
+function updateLegend() {
+    const container = d3.select("#legend-items");
+    container.html("");
+    if (currentMode === "independence") {
+        Object.entries(metropoleColors).forEach(([metro, color]) => {
+            const item = container.append("div").attr("class", "legend-item");
+            item.append("div").attr("class", "legend-color").style("background-color", color);
+            item.append("div").text(metro);
+        });
+        const mixedItem = container.append("div").attr("class", "legend-item").style("margin-top", "8px");
+        mixedItem.append("div").attr("class", "legend-pattern");
+        mixedItem.append("div").style("font-style", "italic").style("font-size", "11px").text("Штриховка: Несколько метрополий");
+    } else {
+        Object.entries(subregionColors).forEach(([region, color]) => {
+            const item = container.append("div").attr("class", "legend-item");
+            item.append("div").attr("class", "legend-color").style("background-color", color);
+            item.append("div").text(region);
+        });
+    }
+}
+
+// --- D3.js КАРТА ---
+const svg = d3.select("#map-container");
+const defs = svg.append("defs");
+const mapGroup = svg.append("g"); 
+const projection = d3.geoMercator();
+const path = d3.geoPath().projection(projection);
+const tooltip = d3.select("#tooltip");
+
+const zoom = d3.zoom().scaleExtent([1, 10]).on("zoom", function(event) {
+    mapGroup.attr("transform", event.transform);
+    mapGroup.selectAll(".country").style("stroke-width", 0.5 / event.transform.k + "px");
+    mapGroup.selectAll(".island-marker").style("stroke-width", 1 / event.transform.k + "px");
+    mapGroup.selectAll("text").style("font-size", (8 / Math.max(1, event.transform.k * 0.5)) + "px");
+    hideTooltip();
+});
+svg.call(zoom);
+
+function resizeMap() {
+    const navHeight = document.getElementById('top-nav').offsetHeight;
+    const w = window.innerWidth; const h = window.innerHeight - navHeight;
+    svg.attr("width", w).attr("height", h);
+    zoom.translateExtent([[0, 0], [w, h]]); 
+}
+window.addEventListener('resize', resizeMap);
+resizeMap();
+
+function getFillStyle(dataObj, id) {
+    if (currentMode === "subregions") return subregionColors[dataObj.subregion] || "#ececec";
+    const metros = dataObj.metro;
+    if (metros.length === 1) return metropoleColors[metros[0]] || "#ececec";
+    
+    const patternId = "pattern-" + id;
+    if (defs.select(`#${patternId}`).empty()) {
+        const pattern = defs.append("pattern").attr("id", patternId).attr("patternUnits", "userSpaceOnUse")
+            .attr("width", metros.length * 6).attr("height", metros.length * 6).attr("patternTransform", "rotate(45)");
+        metros.forEach((metro, index) => {
+            pattern.append("rect").attr("x", index * 6).attr("y", 0).attr("width", 6).attr("height", metros.length * 6)
+                .attr("fill", metropoleColors[metro] || "#ececec");
+        });
+    }
+    return `url(#pattern-${id})`;
+}
+
+function showTooltip(event, info) {
+    tooltip.transition().duration(200).style("opacity", 1);
+    let pointerEvent = event.touches && event.touches.length > 0 ? event.touches[0] : event;
+    
+    let xPos = pointerEvent.pageX + 15; let yPos = pointerEvent.pageY - 28;
+    if (xPos + 290 > window.innerWidth) xPos = window.innerWidth - 300;
+    
+    let tooltipHtml = `<div class="tooltip-title">${info.name}</div><div class="tooltip-row"><b>Субрегион:</b> ${info.subregion}</div>`;
+    if (currentMode === "independence") {
+        tooltipHtml += `<div class="tooltip-row"><b>Год независимости:</b> ${info.year}</div>
+                        <div class="tooltip-row"><b>Метрополия:</b> ${info.metro_text}</div>`;
+    } else {
+        tooltipHtml += `<div class="tooltip-row"><b>Столица (Административный центр):</b> ${info.capital}</div>`;
+    }
+    
+    tooltip.html(tooltipHtml).style("left", Math.max(10, xPos) + "px").style("top", Math.max(10, yPos) + "px");
+}
+
+function hideTooltip() { tooltip.transition().duration(200).style("opacity", 0); }
+svg.on("click", hideTooltip); svg.on("touchstart", hideTooltip);
+
+function resolveGeoId(properties) {
+    const idCandidates = [properties.ADM0_A3, properties.ISO_A3, properties.GU_A3, properties.SU_A3];
+    for (let id of idCandidates) {
+        if (!id || id === "-99") continue;
+        if (countryData[id]) return id;
+    }
+    const name = properties.NAME || properties.ADMIN;
+    if (name === "Dominican Republic") return "DOM";
+    if (name === "Falkland Islands") return "FLK";
+    if (name === "France" && properties.SUBUNIT === "French Guiana") return "GUF";
+    return null;
+}
+
+let geojsonData = [];
+
+function updateMapVisuals() {
+    updateLegend();
+    mapGroup.selectAll(".country").attr("fill", d => getFillStyle(countryData[resolveGeoId(d.properties)], resolveGeoId(d.properties)));
+    mapGroup.selectAll(".island-marker").attr("fill", d => getFillStyle(d.info, d.id));
+    mapGroup.selectAll(".map-label").text(d => currentMode === "independence" ? countryData[resolveGeoId(d.properties)].year.split('/')[0].split(' ')[0] : "");
+    mapGroup.selectAll(".island-label").text(d => currentMode === "independence" ? d.info.year.split('/')[0].split(' ')[0] : "");
+}
+
+d3.json("ne_110m_admin_0_countries.geojson?v=2").then(world => {
+    geojsonData = world.features.filter(d => resolveGeoId(d.properties) !== null);
+    
+    // Подгоняем камеру под Латинскую Америку
+    projection.fitExtent([[30, 30], [window.innerWidth - 30, window.innerHeight - document.getElementById('top-nav').offsetHeight - 30]], {type: "FeatureCollection", features: geojsonData});
+
+    mapGroup.selectAll("path").data(geojsonData).enter().append("path").attr("d", path).attr("class", "country")
+        .on("click", (event, d) => { event.stopPropagation(); showTooltip(event, countryData[resolveGeoId(d.properties)]); })
+        .on("touchstart", (event, d) => { event.stopPropagation(); showTooltip(event, countryData[resolveGeoId(d.properties)]); });
+
+    mapGroup.selectAll(".map-label").data(geojsonData).enter().append("text").attr("class", "map-label").attr("transform", d => {
+            const centroid = path.centroid(d);
+            return (!isNaN(centroid[0]) && !isNaN(centroid[1])) ? `translate(${centroid[0]}, ${centroid[1]})` : "translate(-1000,-1000)"; 
+        });
+
+    const islands = mapGroup.selectAll(".island-group").data(islandNations).enter().append("g")
+        .attr("transform", d => `translate(${projection(d.coords)[0]}, ${projection(d.coords)[1]})`);
+
+    islands.append("circle").attr("class", "island-marker").attr("r", 5)
+        .on("click", (event, d) => { event.stopPropagation(); showTooltip(event, d.info); })
+        .on("touchstart", (event, d) => { event.stopPropagation(); showTooltip(event, d.info); });
+
+    islands.append("text").attr("class", "island-label").attr("dx", 8).attr("dy", 3);
+
+    updateMapVisuals();
+});
+</script>
+</body>
+</html>
