@@ -340,8 +340,11 @@ function nextQuizQuestion() {
     document.getElementById('quiz-year-input').value = "";
     
     renderSelectedMetros();
-    updateMapVisuals(); // Обновит карту (сделает серой)
-}
+    updateMapVisuals();
+}).catch(error => {
+    alert("Критическая ошибка: браузер не смог найти файл карты!\n\nПроверьте, загружен ли файл ne_110m_admin_0_countries.geojson в репозиторий GitHub и нет ли опечатки в его названии.\n\nКод ошибки: " + error);
+    console.error(error);
+});
 
 function handleQuizMapClick(geoId) {
     if (quizPhase !== 'find') return;
