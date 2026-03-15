@@ -369,10 +369,10 @@ function getFillStyle(dataObj, id) {
 
 function showTooltip(event, info) {
     tooltip.transition().duration(200).style("opacity", 1);
-    let pointerEvent = event.touches && event.touches.length > 0 ? event.touches[0] : event;
     
-    let xPos = pointerEvent.pageX + 15;
-    let yPos = pointerEvent.pageY - 28;
+    // Используем pageX и pageY для поддержки и мыши, и мобильных тапов
+    let xPos = event.pageX + 15;
+    let yPos = event.pageY - 28;
     if (xPos + 260 > window.innerWidth) xPos = window.innerWidth - 270;
     
     let tooltipHtml = `<div class="tooltip-title">${info.name}</div><div class="tooltip-row"><b>Субрегион:</b> ${info.subregion}</div>`;
@@ -388,7 +388,6 @@ function showTooltip(event, info) {
 
 function hideTooltip() { tooltip.transition().duration(200).style("opacity", 0); }
 svg.on("click", hideTooltip);
-svg.on("touchstart", hideTooltip);
 
 function resolveGeoId(properties) {
     const idCandidates = [properties.ADM0_A3, properties.ISO_A3, properties.GU_A3, properties.SU_A3];
@@ -419,9 +418,9 @@ d3.json("ne_110m_admin_0_countries.geojson?v=2").then(world => {
     geojsonData = world.features.filter(d => resolveGeoId(d.properties) !== null);
     projection.fitExtent([[30, 30], [window.innerWidth - 30, window.innerHeight - document.getElementById('top-nav').offsetHeight - 30]], {type: "FeatureCollection", features: geojsonData});
 
+    // Обработчик touchstart удален
     mapGroup.selectAll("path").data(geojsonData).enter().append("path").attr("d", path).attr("class", "country")
-        .on("click", (event, d) => { event.stopPropagation(); showTooltip(event, countryData[resolveGeoId(d.properties)]); })
-        .on("touchstart", (event, d) => { event.stopPropagation(); showTooltip(event, countryData[resolveGeoId(d.properties)]); });
+        .on("click", (event, d) => { event.stopPropagation(); showTooltip(event, countryData[resolveGeoId(d.properties)]); });
 
     mapGroup.selectAll(".map-label").data(geojsonData).enter().append("text").attr("class", "map-label").attr("transform", d => {
             const centroid = path.centroid(d);
@@ -431,9 +430,9 @@ d3.json("ne_110m_admin_0_countries.geojson?v=2").then(world => {
     const islands = mapGroup.selectAll(".island-group").data(islandNations).enter().append("g")
         .attr("transform", d => `translate(${projection(d.coords)[0]}, ${projection(d.coords)[1]})`);
 
+    // Обработчик touchstart удален
     islands.append("circle").attr("class", "island-marker").attr("r", 5)
-        .on("click", (event, d) => { event.stopPropagation(); showTooltip(event, d.info); })
-        .on("touchstart", (event, d) => { event.stopPropagation(); showTooltip(event, d.info); });
+        .on("click", (event, d) => { event.stopPropagation(); showTooltip(event, d.info); });
 
     islands.append("text").attr("class", "island-label").attr("dx", 8).attr("dy", 3);
 
