@@ -42,7 +42,7 @@
             font-size: 13px; cursor: pointer; color: #5c6b7a; transition: all 0.2s;
         }
         .mode-btn.active { background: var(--text-main); color: white; font-weight: 500; }
-        .mode-btn.quiz-mode-btn.active { background: var(--quiz-primary); } /* Цвет кнопки теста */
+        .mode-btn.quiz-mode-btn.active { background: var(--quiz-primary); }
 
         #map-container { flex-grow: 1; width: 100vw; display: block; background-color: #eaf6f6; }
         
@@ -83,7 +83,7 @@
         .legend-pattern { width: 14px; height: 14px; margin-right: 8px; border: 1px solid rgba(0,0,0,0.2); border-radius: 3px; flex-shrink: 0; background: repeating-linear-gradient(45deg, #ccc, #ccc 3px, #fff 3px, #fff 6px); }
         #legend.collapsed #legend-content { max-height: 0; padding: 0 10px; overflow: hidden; border: none; }
 
-        /* --- СТИЛИ ПАНЕЛИ ТЕСТИРОВАНИЯ --- */
+        /* ПАНЕЛЬ ТЕСТИРОВАНИЯ */
         #quiz-panel {
             position: absolute; top: 70px; right: 20px; background: rgba(255, 255, 255, 0.98);
             border: 2px solid var(--quiz-primary); border-radius: 8px; padding: 15px; width: 300px;
@@ -144,21 +144,17 @@
 
     <div id="quiz-answer-section" style="display: none;">
         <div class="quiz-title">Данные: <span id="quiz-active-name" style="color: var(--quiz-primary);"></span></div>
-        
         <div class="quiz-form-group">
             <label class="quiz-label">Год независимости:</label>
             <input type="text" id="quiz-year-input" class="quiz-input" placeholder="Например: 1960">
         </div>
-
         <div class="quiz-form-group">
             <label class="quiz-label">Бывшие метрополии:</label>
             <div id="quiz-selected-metros"></div>
-            
             <select id="quiz-metro-select" class="quiz-select" style="margin-top: 5px;">
                 <option value="">+ Добавить метрополию...</option>
-                </select>
+            </select>
         </div>
-
         <button id="quiz-check-btn" class="quiz-btn">Проверить</button>
         <div id="quiz-result" class="quiz-result-box"></div>
         <button id="quiz-next-btn" class="quiz-btn quiz-btn-next" style="display: none;">Следующая страна</button>
@@ -168,7 +164,7 @@
 <svg id="map-container"></svg>
 
 <script>
-// --- БАЗА ДАННЫХ И ЦВЕТА ---
+// --- ДАННЫЕ И ЦВЕТА ---
 const metropoleColors = {
     "Франция": "#4287f5", "Великобритания": "#f54242", "Испания": "#f5d142",
     "Италия": "#9e42f5", "Португалия": "#42f563", "Германия": "#f58742",
@@ -249,15 +245,14 @@ let currentMode = "independence";
 // --- ЛОГИКА ТЕСТИРОВАНИЯ (QUIZ) ---
 let quizCountriesList = [];
 let currentQuizIndex = 0;
-let quizPhase = "off"; // off | find | answer | result
+let quizPhase = "off";
 let currentQuizTargetId = null;
-let selectedMetros = {}; // { "Франция": "1960" }
+let selectedMetros = {};
 
 const quizPanel = document.getElementById('quiz-panel');
 const legendEl = document.getElementById('legend');
-
-// Инициализация выпадающего списка метрополий
 const metroSelect = document.getElementById('quiz-metro-select');
+
 Object.keys(metropoleColors).forEach(metro => {
     let opt = document.createElement('option');
     opt.value = metro; opt.textContent = metro;
@@ -266,11 +261,8 @@ Object.keys(metropoleColors).forEach(metro => {
 
 metroSelect.addEventListener('change', function() {
     const val = this.value;
-    if (val && !selectedMetros[val]) {
-        selectedMetros[val] = "";
-        renderSelectedMetros();
-    }
-    this.value = ""; // сброс селекта
+    if (val && !selectedMetros[val]) { selectedMetros[val] = ""; renderSelectedMetros(); }
+    this.value = ""; 
 });
 
 function renderSelectedMetros() {
@@ -279,33 +271,21 @@ function renderSelectedMetros() {
     Object.keys(selectedMetros).forEach(metro => {
         const row = document.createElement('div');
         row.className = "quiz-metro-item";
-        row.innerHTML = `
-            <span>${metro}</span>
-            <div>
-                <span style="font-size: 11px;">до: </span>
+        row.innerHTML = `<span>${metro}</span><div><span style="font-size: 11px;">до: </span>
                 <input type="text" class="quiz-metro-year" data-metro="${metro}" placeholder="Год" value="${selectedMetros[metro]}">
-                <button class="quiz-remove-btn" onclick="removeMetro('${metro}')">×</button>
-            </div>
-        `;
+                <button class="quiz-remove-btn" onclick="removeMetro('${metro}')">×</button></div>`;
         container.appendChild(row);
     });
-    
-    // Привязываем обновление значений
     document.querySelectorAll('.quiz-metro-year').forEach(input => {
-        input.addEventListener('input', (e) => {
-            selectedMetros[e.target.dataset.metro] = e.target.value;
-        });
+        input.addEventListener('input', (e) => { selectedMetros[e.target.dataset.metro] = e.target.value; });
     });
 }
 
-window.removeMetro = function(metro) {
-    delete selectedMetros[metro];
-    renderSelectedMetros();
-}
+window.removeMetro = function(metro) { delete selectedMetros[metro]; renderSelectedMetros(); }
 
 function startQuiz() {
     const allIds = [...Object.keys(countryData), ...islandNations.map(i => i.id)];
-    quizCountriesList = allIds.sort(() => Math.random() - 0.5); // Перемешиваем
+    quizCountriesList = allIds.sort(() => Math.random() - 0.5); 
     currentQuizIndex = 0;
     legendEl.style.display = 'none';
     quizPanel.style.display = 'block';
@@ -321,15 +301,12 @@ function getCountryNameById(id) {
 
 function nextQuizQuestion() {
     if (currentQuizIndex >= quizCountriesList.length) {
-        document.getElementById('quiz-find-section').innerHTML = "<div class="quiz-title">Тест завершен! Вы прошли все страны.</div>";
+        document.getElementById('quiz-find-section').innerHTML = "<div class='quiz-title'>Тест завершен! Вы прошли все страны.</div>";
         document.getElementById('quiz-answer-section').style.display = 'none';
         return;
     }
-    
     currentTargetId = quizCountriesList[currentQuizIndex];
-    quizPhase = 'find';
-    selectedMetros = {};
-    
+    quizPhase = 'find'; selectedMetros = {};
     document.getElementById('quiz-target-name').textContent = getCountryNameById(currentTargetId);
     document.getElementById('quiz-error-msg').textContent = "";
     document.getElementById('quiz-find-section').style.display = 'block';
@@ -338,26 +315,18 @@ function nextQuizQuestion() {
     document.getElementById('quiz-next-btn').style.display = 'none';
     document.getElementById('quiz-check-btn').style.display = 'block';
     document.getElementById('quiz-year-input').value = "";
-    
-    renderSelectedMetros();
-    updateMapVisuals();
-}).catch(error => {
-    alert("Критическая ошибка: браузер не смог найти файл карты!\n\nПроверьте, загружен ли файл ne_110m_admin_0_countries.geojson в репозиторий GitHub и нет ли опечатки в его названии.\n\nКод ошибки: " + error);
-    console.error(error);
-});
+    renderSelectedMetros(); updateMapVisuals();
+}
 
 function handleQuizMapClick(geoId) {
     if (quizPhase !== 'find') return;
-    
     if (geoId === currentTargetId) {
-        // Нашли правильную страну! Переходим к ответу
         quizPhase = 'answer';
         document.getElementById('quiz-find-section').style.display = 'none';
         document.getElementById('quiz-active-name').textContent = getCountryNameById(currentTargetId);
         document.getElementById('quiz-answer-section').style.display = 'block';
-        updateMapVisuals(); // Подсветит найденную страну
+        updateMapVisuals(); 
     } else {
-        // Ошибка
         const clickedName = getCountryNameById(geoId) || "Неизвестная территория";
         document.getElementById('quiz-error-msg').textContent = `Неверно! Это ${clickedName}. Ищите ${getCountryNameById(currentTargetId)}!`;
     }
@@ -366,41 +335,29 @@ function handleQuizMapClick(geoId) {
 document.getElementById('quiz-check-btn').addEventListener('click', () => {
     const targetData = countryData[currentTargetId] || islandNations.find(i => i.id === currentTargetId).info;
     const inputYear = document.getElementById('quiz-year-input').value.trim();
-    
     let errors = [];
     
-    // Проверка года независимости (гибкая, по подстроке, чтобы засчитывать 1960 при "1960/61" и тд)
-    if (!targetData.year.includes(inputYear) || inputYear === "") {
-        errors.push(`<b>Год независимости:</b> неверно. Правильно: ${targetData.year}`);
-    }
+    if (!targetData.year.includes(inputYear) || inputYear === "") errors.push(`<b>Год независимости:</b> неверно. Правильно: ${targetData.year}`);
     
-    // Проверка метрополий
     const targetMetros = targetData.metro;
     const selectedMetroKeys = Object.keys(selectedMetros);
-    
-    // Проверяем, не забыли ли метрополию и не добавили ли лишнюю
     let missingMetros = targetMetros.filter(m => !selectedMetroKeys.includes(m));
     let extraMetros = selectedMetroKeys.filter(m => !targetMetros.includes(m));
     
     if (missingMetros.length > 0) errors.push(`<b>Пропущены метрополии:</b> ${missingMetros.join(', ')}`);
     if (extraMetros.length > 0) errors.push(`<b>Лишние метрополии:</b> ${extraMetros.join(', ')}`);
     
-    // Проверка дат метрополий (умная проверка, ищет введенный год в строке metro_text)
     selectedMetroKeys.forEach(m => {
         if (targetMetros.includes(m)) {
             const inputDate = selectedMetros[m].trim();
-            // Если текст реальной истории не содержит введенный год
             if (inputDate !== "" && !targetData.metro_text.includes(inputDate)) {
                  errors.push(`<b>Дата для ${m}:</b> неверно.`);
-            } else if (inputDate === "") {
-                 errors.push(`<b>Укажите год для ${m}</b>`);
-            }
+            } else if (inputDate === "") errors.push(`<b>Укажите год для ${m}</b>`);
         }
     });
 
     const resultBox = document.getElementById('quiz-result');
     resultBox.style.display = 'block';
-    
     if (errors.length === 0) {
         resultBox.className = "quiz-result-box correct";
         resultBox.innerHTML = `<strong>Идеально!</strong><br>Полная справка: ${targetData.metro_text}`;
@@ -411,51 +368,33 @@ document.getElementById('quiz-check-btn').addEventListener('click', () => {
     
     document.getElementById('quiz-check-btn').style.display = 'none';
     document.getElementById('quiz-next-btn').style.display = 'block';
-    quizPhase = 'result';
-    updateMapVisuals(); // Включит реальные цвета
+    quizPhase = 'result'; updateMapVisuals(); 
 });
 
-document.getElementById('quiz-next-btn').addEventListener('click', () => {
-    currentQuizIndex++;
-    nextQuizQuestion();
-});
+document.getElementById('quiz-next-btn').addEventListener('click', () => { currentQuizIndex++; nextQuizQuestion(); });
 
-
-// --- ОБЩАЯ ЛОГИКА КНОПОК И ЛЕГЕНДЫ ---
+// --- ОБЩАЯ ЛОГИКА ---
 const modeBtns = document.querySelectorAll('.mode-btn');
 modeBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
-        modeBtns.forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
+        modeBtns.forEach(b => b.classList.remove('active')); e.target.classList.add('active');
         currentMode = e.target.dataset.mode;
-        
-        if (currentMode === 'quiz') {
-            startQuiz();
-        } else {
-            quizPhase = 'off';
-            quizPanel.style.display = 'none';
-            legendEl.style.display = 'block';
-            updateMapVisuals();
-        }
+        if (currentMode === 'quiz') startQuiz();
+        else { quizPhase = 'off'; quizPanel.style.display = 'none'; legendEl.style.display = 'block'; updateMapVisuals(); }
     });
 });
 
 const legendHeader = document.getElementById('legend-header');
 let isDragging = false; let isMoved = false; let startX, startY, initialLeft, initialTop;
-
 legendHeader.addEventListener("pointerdown", (e) => {
     if (window.innerWidth <= 600) return; 
     isDragging = true; isMoved = false; startX = e.clientX; startY = e.clientY;
-    const rect = legendEl.getBoundingClientRect();
-    legendEl.style.bottom = "auto"; legendEl.style.right = "auto";
-    initialLeft = rect.left; initialTop = rect.top;
-    legendEl.style.left = initialLeft + "px"; legendEl.style.top = initialTop + "px";
+    const rect = legendEl.getBoundingClientRect(); legendEl.style.bottom = "auto"; legendEl.style.right = "auto";
+    initialLeft = rect.left; initialTop = rect.top; legendEl.style.left = initialLeft + "px"; legendEl.style.top = initialTop + "px";
     legendHeader.setPointerCapture(e.pointerId);
 });
-
 legendHeader.addEventListener("pointermove", (e) => {
-    if (!isDragging) return;
-    const dx = e.clientX - startX; const dy = e.clientY - startY;
+    if (!isDragging) return; const dx = e.clientX - startX; const dy = e.clientY - startY;
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isMoved = true;
     if (isMoved) {
         let newX = Math.max(0, Math.min(window.innerWidth - legendEl.offsetWidth, initialLeft + dx));
@@ -463,32 +402,24 @@ legendHeader.addEventListener("pointermove", (e) => {
         legendEl.style.left = newX + "px"; legendEl.style.top = newY + "px";
     }
 });
-
 legendHeader.addEventListener("pointerup", (e) => {
-    if (window.innerWidth > 600) {
-        isDragging = false; legendHeader.releasePointerCapture(e.pointerId);
-        if (!isMoved) legendEl.classList.toggle('collapsed');
-    }
+    if (window.innerWidth > 600) { isDragging = false; legendHeader.releasePointerCapture(e.pointerId); if (!isMoved) legendEl.classList.toggle('collapsed'); }
 });
 legendHeader.addEventListener('click', () => { if(window.innerWidth <= 600) legendEl.classList.toggle('collapsed'); });
 
 function updateLegend() {
-    const container = d3.select("#legend-items");
-    container.html("");
+    const container = d3.select("#legend-items"); container.html("");
     if (currentMode === "independence") {
         Object.entries(metropoleColors).forEach(([metro, color]) => {
             const item = container.append("div").attr("class", "legend-item");
-            item.append("div").attr("class", "legend-color").style("background-color", color);
-            item.append("div").text(metro);
+            item.append("div").attr("class", "legend-color").style("background-color", color); item.append("div").text(metro);
         });
         const mixedItem = container.append("div").attr("class", "legend-item").style("margin-top", "8px");
-        mixedItem.append("div").attr("class", "legend-pattern");
-        mixedItem.append("div").style("font-style", "italic").style("font-size", "11px").text("Штриховка: Несколько метрополий");
+        mixedItem.append("div").attr("class", "legend-pattern"); mixedItem.append("div").style("font-style", "italic").style("font-size", "11px").text("Штриховка: Несколько метрополий");
     } else if (currentMode === "subregions") {
         Object.entries(subregionColors).forEach(([region, color]) => {
             const item = container.append("div").attr("class", "legend-item");
-            item.append("div").attr("class", "legend-color").style("background-color", color);
-            item.append("div").text(region);
+            item.append("div").attr("class", "legend-color").style("background-color", color); item.append("div").text(region);
         });
     }
 }
@@ -513,74 +444,52 @@ svg.call(zoom);
 function resizeMap() {
     const navHeight = document.getElementById('top-nav').offsetHeight;
     const w = window.innerWidth; const h = window.innerHeight - navHeight;
-    svg.attr("width", w).attr("height", h);
-    zoom.translateExtent([[0, 0], [w, h]]); 
+    svg.attr("width", w).attr("height", h); zoom.translateExtent([[0, 0], [w, h]]); 
 }
-window.addEventListener('resize', resizeMap);
-resizeMap();
+window.addEventListener('resize', resizeMap); resizeMap();
 
-function getFillStyle(dataObj, id) {
-    // Режим ТЕСТА
-    if (currentMode === "quiz") {
-        if (quizPhase === 'result' || (quizPhase === 'answer' && id === currentTargetId)) {
-            // Если ответ уже дан или страна найдена, закрашиваем ее реальным цветом
-            return getIndependenceColor(dataObj, id);
-        }
-        return "#ececec"; // Иначе всё серое, чтобы не было подсказок
-    }
-    
-    // Режимы Карты
-    if (currentMode === "subregions") return subregionColors[dataObj.subregion] || "#ececec";
-    return getIndependenceColor(dataObj, id);
-}
-
-// Вынесена логика штриховки для удобства
 function getIndependenceColor(dataObj, id) {
     const metros = dataObj.metro;
     if (metros.length === 1) return metropoleColors[metros[0]] || "#ececec";
-    
     const patternId = "pattern-" + id;
     if (defs.select(`#${patternId}`).empty()) {
-        const pattern = defs.append("pattern").attr("id", patternId).attr("patternUnits", "userSpaceOnUse")
-            .attr("width", metros.length * 6).attr("height", metros.length * 6).attr("patternTransform", "rotate(45)");
-        metros.forEach((metro, index) => {
-            pattern.append("rect").attr("x", index * 6).attr("y", 0).attr("width", 6).attr("height", metros.length * 6)
-                .attr("fill", metropoleColors[metro] || "#ececec");
-        });
+        const pattern = defs.append("pattern").attr("id", patternId).attr("patternUnits", "userSpaceOnUse").attr("width", metros.length * 6).attr("height", metros.length * 6).attr("patternTransform", "rotate(45)");
+        metros.forEach((metro, index) => { pattern.append("rect").attr("x", index * 6).attr("y", 0).attr("width", 6).attr("height", metros.length * 6).attr("fill", metropoleColors[metro] || "#ececec"); });
     }
     return `url(#pattern-${id})`;
 }
 
+function getFillStyle(dataObj, id) {
+    if (currentMode === "quiz") return (quizPhase === 'result' || (quizPhase === 'answer' && id === currentTargetId)) ? getIndependenceColor(dataObj, id) : "#ececec";
+    if (currentMode === "subregions") return subregionColors[dataObj.subregion] || "#ececec";
+    return getIndependenceColor(dataObj, id);
+}
 
 function showTooltip(event, info) {
-    if (currentMode === "quiz") return; // В режиме теста тултипы отключены!
-    
+    if (currentMode === "quiz") return; 
     tooltip.transition().duration(200).style("opacity", 1);
     let xPos = event.pageX + 15; let yPos = event.pageY - 28;
     if (xPos + 260 > window.innerWidth) xPos = window.innerWidth - 270;
     
     let tooltipHtml = `<div class="tooltip-title">${info.name}</div><div class="tooltip-row"><b>Субрегион:</b> ${info.subregion}</div>`;
     if (currentMode === "independence") {
-        tooltipHtml += `<div class="tooltip-row"><b>Год независимости:</b> ${info.year}</div>
-                        <div class="tooltip-row"><b>Метрополия:</b> ${info.metro_text}</div>`;
-    } else {
-        tooltipHtml += `<div class="tooltip-row"><b>Столица:</b> ${info.capital}</div>`;
-    }
+        tooltipHtml += `<div class="tooltip-row"><b>Год независимости:</b> ${info.year}</div><div class="tooltip-row"><b>Метрополия:</b> ${info.metro_text}</div>`;
+    } else tooltipHtml += `<div class="tooltip-row"><b>Столица:</b> ${info.capital}</div>`;
     tooltip.html(tooltipHtml).style("left", Math.max(10, xPos) + "px").style("top", Math.max(10, yPos) + "px");
 }
 
 function hideTooltip() { tooltip.transition().duration(200).style("opacity", 0); }
 svg.on("click", hideTooltip);
 
-function resolveGeoId(properties) {
-    const idCandidates = [properties.ADM0_A3, properties.ISO_A3, properties.GU_A3, properties.SU_A3];
+function resolveGeoId(d) {
+    const prop = d.properties || {};
+    const idCandidates = [d.id, prop.ADM0_A3, prop.ISO_A3, prop.GU_A3, prop.SU_A3];
     for (let id of idCandidates) {
         if (!id || id === "-99") continue;
         if (countryData[id]) return id;
-        if (id === "SAH") return "ESH"; 
-        if (id === "SDS") return "SSD"; 
+        if (id === "SAH") return "ESH"; if (id === "SDS") return "SSD"; 
     }
-    const name = properties.NAME || properties.ADMIN;
+    const name = prop.NAME || prop.ADMIN || prop.name;
     if (name === "Madagascar") return "MDG";
     if (name === "Western Sahara" || name === "W. Sahara") return "ESH";
     if (name === "Somaliland") return "SOL";
@@ -591,49 +500,35 @@ let geojsonData = [];
 
 function updateMapVisuals() {
     updateLegend();
-    
-    mapGroup.selectAll(".country")
-        .attr("fill", d => {
-            const geoId = resolveGeoId(d.properties);
-            return countryData[geoId] ? getFillStyle(countryData[geoId], geoId) : "#ececec";
-        })
-        .style("stroke-width", d => {
-            // Подсветка найденной страны в тесте
-            const geoId = resolveGeoId(d.properties);
-            return (currentMode === 'quiz' && geoId === currentTargetId && quizPhase !== 'find') ? "2px" : "0.5px";
-        })
-        .style("stroke", d => {
-            const geoId = resolveGeoId(d.properties);
-            return (currentMode === 'quiz' && geoId === currentTargetId && quizPhase !== 'find') ? "#e74c3c" : "#333";
-        });
+    mapGroup.selectAll(".country").attr("fill", d => {
+        const geoId = resolveGeoId(d);
+        return countryData[geoId] ? getFillStyle(countryData[geoId], geoId) : "#ececec";
+    }).style("stroke-width", d => (currentMode === 'quiz' && resolveGeoId(d) === currentTargetId && quizPhase !== 'find') ? "2px" : "0.5px")
+      .style("stroke", d => (currentMode === 'quiz' && resolveGeoId(d) === currentTargetId && quizPhase !== 'find') ? "#e74c3c" : "#333");
 
     mapGroup.selectAll(".island-marker").attr("fill", d => getFillStyle(d.info, d.id));
-    
-    // Скрытие надписей в режиме теста
     mapGroup.selectAll(".map-label").text(d => {
         if (currentMode === "quiz") return "";
-        const geoId = resolveGeoId(d.properties);
-        if (!countryData[geoId]) return "";
-        return currentMode === "independence" ? countryData[geoId].year.split('/')[0].split(' ')[0] : "";
+        const geoId = resolveGeoId(d);
+        return (countryData[geoId] && currentMode === "independence") ? countryData[geoId].year.split('/')[0].split(' ')[0] : "";
     });
     mapGroup.selectAll(".island-label").text(d => (currentMode === "independence" && currentMode !== "quiz") ? d.info.year.split('/')[0].split(' ')[0] : "");
 }
 
-d3.json("ne_110m_admin_0_countries.geojson?v=2").then(world => {
-    geojsonData = world.features.filter(d => resolveGeoId(d.properties) !== null);
+// 100% НАДЕЖНАЯ ЗАГРУЗКА КАРТЫ: Сначала локально, если ошибка — качаем из интернета (CDN)
+const localUrl = "ne_110m_admin_0_countries.geojson";
+const cdnUrl = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
+
+d3.json(localUrl).catch(() => d3.json(cdnUrl)).then(world => {
+    geojsonData = world.features.filter(d => resolveGeoId(d) !== null);
     projection.fitExtent([[30, 30], [window.innerWidth - 30, window.innerHeight - document.getElementById('top-nav').offsetHeight - 30]], {type: "FeatureCollection", features: geojsonData});
 
     mapGroup.selectAll("path").data(geojsonData).enter().append("path").attr("d", path).attr("class", "country")
         .on("click", (event, d) => { 
             event.stopPropagation(); 
-            const geoId = resolveGeoId(d.properties);
+            const geoId = resolveGeoId(d);
             if (!geoId || !countryData[geoId]) return;
-            
-            if (currentMode === 'quiz') {
-                handleQuizMapClick(geoId);
-            } else {
-                showTooltip(event, countryData[geoId]); 
-            }
+            if (currentMode === 'quiz') handleQuizMapClick(geoId); else showTooltip(event, countryData[geoId]); 
         });
 
     mapGroup.selectAll(".map-label").data(geojsonData).enter().append("text").attr("class", "map-label").attr("transform", d => {
@@ -647,16 +542,13 @@ d3.json("ne_110m_admin_0_countries.geojson?v=2").then(world => {
     islands.append("circle").attr("class", "island-marker").attr("r", 5)
         .on("click", (event, d) => { 
             event.stopPropagation(); 
-            if (currentMode === 'quiz') {
-                handleQuizMapClick(d.id);
-            } else {
-                showTooltip(event, d.info); 
-            }
+            if (currentMode === 'quiz') handleQuizMapClick(d.id); else showTooltip(event, d.info); 
         });
 
     islands.append("text").attr("class", "island-label").attr("dx", 8).attr("dy", 3);
-
     updateMapVisuals();
+}).catch(error => {
+    alert("Критическая ошибка: не удалось загрузить геоданные карты ни с вашего компьютера, ни из интернета. Проверьте соединение.");
 });
 </script>
 </body>
