@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>История независимости | Главное меню</title>
     
+    <!-- Подключение шрифтов Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
@@ -30,7 +31,7 @@
             background-color: var(--bg-color);
             font-family: 'Inter', sans-serif;
             color: var(--text-main);
-            /* Добавляем легкую текстуру (опционально) */
+            /* Легкая текстура на фоне */
             background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
             background-size: 40px 40px;
         }
@@ -38,7 +39,7 @@
         .container {
             text-align: center;
             padding: 2rem;
-            max-width: 800px;
+            max-width: 1000px; /* Увеличено для размещения 3-х карточек */
             width: 90%;
         }
 
@@ -64,12 +65,14 @@
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
+            align-items: center;
         }
 
-        @media (min-width: 600px) {
+        @media (min-width: 800px) {
             .menu-grid {
                 flex-direction: row;
                 justify-content: center;
+                flex-wrap: wrap; /* Позволяет карточкам переноситься на новые строки */
             }
         }
 
@@ -88,6 +91,7 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.02);
             flex: 1;
             min-width: 250px;
+            max-width: 280px; /* Карточки не будут растягиваться слишком сильно */
         }
 
         .menu-card:hover {
@@ -136,6 +140,11 @@
             
             <a href="latam.html" class="menu-card">
                 <h2>Латинская Америка</h2>
+                <span>Открыть карту</span>
+            </a>
+
+            <a href="asia.html" class="menu-card">
+                <h2>Зарубежная Азия</h2>
                 <span>Открыть карту</span>
             </a>
         </div>
