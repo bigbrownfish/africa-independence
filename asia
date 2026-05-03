@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Азия | Исторический атлас</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #fcfbf9; --nav-bg: #ffffff;
+            --text-main: #2c3e50; --border-color: #e2dfd6;
+            --quiz-primary: #3498db; --quiz-success: #2ecc71; --quiz-danger: #e74c3c;
+        }
+
+        body { 
+            margin: 0; padding: 0; background-color: var(--bg-color); 
+            font-family: 'Inter', sans-serif; overflow: hidden; 
+            touch-action: none; display: flex; flex-direction: column; height: 100vh;
+        }
+
+        #top-nav {
+            background-color: var(--nav-bg); border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px; display: flex; justify-content: space-between;
+            align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 20;
+        }
+
+        .back-btn {
+            text-decoration: none; color: var(--text-main); font-weight: 500; font-size: 14px;
+            display: flex; align-items: center; gap: 5px; padding: 6px 12px;
+            border: 1px solid var(--border-color); border-radius: 4px; transition: background 0.2s;
+        }
+        .back-btn:hover { background: var(--bg-color); }
+
+        .mode-selector {
+            display: flex; background: var(--bg-color); border: 1px solid var(--border-color);
+            border-radius: 6px; overflow: hidden;
+        }
+        .mode-btn {
+            border: none; background: none; padding: 8px 16px; font-family: 'Inter', sans-serif;
+            font-size: 13px; cursor: pointer; color: #5c6b7a; transition: all 0.2s;
+        }
+        .mode-btn.active { background: var(--text-main); color: white; font-weight: 500; }
+        .mode-btn.quiz-mode-btn.active { background: var(--quiz-primary); }
+
+        #map-container { flex-grow: 1; width: 100vw; display: block; background-color: #eaf6f6; }
+        
+        .country { stroke: #333; stroke-width: 0.5px; transition: opacity 0.2s, fill 0.3s, stroke-width 0.2s; cursor: pointer; }
+        .country:hover { opacity: 0.7; }
+        .island-marker { stroke: #111; stroke-width: 0.8px; cursor: pointer; transition: opacity 0.2s, fill 0.3s; }
+        .island-marker:hover { opacity: 0.7; }
+        
+        .map-label { font-size: 8px; font-weight: bold; fill: #111; text-anchor: middle; pointer-events: none; text-shadow: 1px 1px 2px rgba(255,255,255,0.8), -1px -1px 2px rgba(255,255,255,0.8); }
+        .island-label { font-size: 8px; font-weight: bold; fill: #111; text-anchor: start; pointer-events: none; text-shadow: 1px 1px 2px rgba(255,255,255,0.8), -1px -1px 2px rgba(255,255,255,0.8); opacity: 0; transition: opacity 0.3s; }
+        
+        #tooltip {
+            position: absolute; background: rgba(255, 255, 255, 0.95);
+            border: 1px solid var(--border-color); padding: 12px; border-radius: 6px;
+            pointer-events: none; opacity: 0; font-size: 13px;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.1); max-width: 320px; z-index: 10;
+        }
+        .tooltip-title { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 16px; margin-bottom: 8px; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 4px;}
+        .tooltip-row { margin-bottom: 4px; line-height: 1.3; }
+
+        #legend {
+            position: absolute; bottom: 20px; left: 10px;
+            background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-color);
+            border-radius: 6px; font-size: 12px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+            z-index: 5; width: 220px;
+        }
+        #legend-header {
+            font-family: 'Inter', sans-serif; font-weight: 500; font-size: 13px;
+            text-align: center; background: var(--nav-bg);
+            border-bottom: 1px solid var(--border-color); border-radius: 6px 6px 0 0;
+            padding: 10px; user-select: none; display: flex; justify-content: space-between; align-items: center;
+            cursor: grab; touch-action: none;
+        }
+        #legend-header:active { cursor: grabbing; }
+        #legend-content { padding: 10px; max-height: 40vh; overflow-y: auto; transition: max-height 0.3s; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 6px; }
+        .legend-color { width: 14px; height: 14px; margin-right: 8px; border: 1px solid rgba(0,0,0,0.2); border-radius: 3px; flex-shrink: 0; }
+        .legend-pattern { width: 14px; height: 14px; margin-right: 8px; border: 1px solid rgba(0,0,0,0.2); border-radius: 3px; flex-shrink: 0; background: repeating-linear-gradient(45deg, #ccc, #ccc 3px, #fff 3px, #fff 6px); }
+        #legend.collapsed #legend-content { max-height: 0; padding: 0 10px; overflow: hidden; border: none; }
+        .toggle-icon { transition: transform 0.3s; }
+        #legend.collapsed .toggle-icon { transform: rotate(180deg); }
+
+        /* ПАНЕЛЬ ТЕСТИРОВАНИЯ */
+        #quiz-panel {
+            position: absolute; top: 70px; right: 20px; background: rgba(255, 255, 255, 0.98);
+            border: 2px solid var(--quiz-primary); border-radius: 8px; padding: 15px; width: 300px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 15; display: none;
+            max-height: 80vh; overflow-y: auto; font-size: 14px;
+        }
+        #quiz-header { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 18px; color: var(--quiz-primary); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        .quiz-title { font-weight: 600; font-size: 16px; margin-bottom: 10px; }
+        .quiz-error { color: var(--quiz-danger); font-size: 12px; margin-bottom: 10px; font-weight: 500; min-height: 15px; }
+        .quiz-form-group { margin-bottom: 12px; }
+        .quiz-label { display: block; font-size: 12px; color: #555; margin-bottom: 4px; font-weight: 500; }
+        .quiz-input, .quiz-select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Inter', sans-serif; box-sizing: border-box; }
+        .quiz-metro-item { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 6px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 5px; }
+        .quiz-metro-item span { font-size: 13px; font-weight: 500; }
+        .quiz-metro-year { width: 70px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+        .quiz-remove-btn { background: none; border: none; color: var(--quiz-danger); cursor: pointer; font-size: 16px; font-weight: bold; padding: 0 5px; }
+        .quiz-btn { width: 100%; padding: 10px; margin-top: 10px; background: var(--quiz-primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        .quiz-btn:hover { background: #2980b9; }
+        .quiz-btn-next { background: var(--quiz-success); }
+        .quiz-btn-next:hover { background: #27ae60; }
+        .quiz-result-box { padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 13px; display: none; }
+        .quiz-result-box.correct { background-color: #e8f8f5; border: 1px solid #2ecc71; color: #27ae60; }
+        .quiz-result-box.incorrect { background-color: #fdedec; border: 1px solid #e74c3c; color: #c0392b; }
+
+        @media (max-width: 600px) {
+            #top-nav { padding: 8px 10px; flex-direction: column; gap: 10px; }
+            .mode-btn { padding: 6px 12px; font-size: 12px; }
+            #legend { bottom: 0; left: 0 !important; top: auto !important; width: 100%; border-radius: 12px 12px 0 0; border-left: none; border-right: none; border-bottom: none; }
+            #quiz-panel { top: auto; bottom: 0; right: 0; width: 100%; border-radius: 12px 12px 0 0; border-left: none; border-right: none; border-bottom: none; box-sizing: border-box; }
+        }
+    </style>
+</head>
+<body>
+
+<nav id="top-nav">
+    <a href="index.html" class="back-btn">← В меню</a>
+    <div class="mode-selector">
+        <button class="mode-btn active" data-mode="independence">Независимость</button>
+        <button class="mode-btn" data-mode="subregions">Субрегионы</button>
+        <button class="mode-btn quiz-mode-btn" data-mode="quiz">Тест</button>
+    </div>
+</nav>
+
+<div id="tooltip"></div>
+
+<div id="legend">
+    <div id="legend-header"><span>≡ Условные обозначения</span><span class="toggle-icon">▲</span></div>
+    <div id="legend-content"><div id="legend-items"></div></div>
+</div>
+
+<div id="quiz-panel">
+    <div id="quiz-header">Режим тестирования</div>
+    <div id="quiz-find-section">
+        <div class="quiz-title">Где находится: <br><span id="quiz-target-name" style="color: var(--quiz-primary); font-size: 20px;"></span>?</div>
+        <div class="quiz-error" id="quiz-error-msg"></div>
+        <div style="font-size: 12px; color: #7f8c8d;">Нажмите на нужную страну (территорию) на карте.</div>
+    </div>
+
+    <div id="quiz-answer-section" style="display: none;">
+        <div class="quiz-title">Данные: <span id="quiz-active-name" style="color: var(--quiz-primary);"></span></div>
+        <div class="quiz-form-group">
+            <label class="quiz-label">Год независимости (или 'Завис.' / 'Не была колонией'):</label>
+            <input type="text" id="quiz-year-input" class="quiz-input" placeholder="Например: 1991">
+        </div>
+        <div class="quiz-form-group">
+            <label class="quiz-label">Бывшие метрополии:</label>
+            <div id="quiz-selected-metros"></div>
+            <select id="quiz-metro-select" class="quiz-select" style="margin-top: 5px;">
+                <option value="">+ Добавить метрополию...</option>
+            </select>
+        </div>
+        <button id="quiz-check-btn" class="quiz-btn">Проверить</button>
+        <div id="quiz-result" class="quiz-result-box"></div>
+        <button id="quiz-next-btn" class="quiz-btn quiz-btn-next" style="display: none;">Следующая территория</button>
+    </div>
+</div>
+
+<svg id="map-container"></svg>
+
+<script>
+// --- ДАННЫЕ И ЦВЕТА ---
+const metropoleColors = {
+    "Российская империя": "#f1c40f", "СССР": "#c0392b",
+    "Великобритания": "#f54242", "Османская империя": "#27ae60",
+    "Франция": "#4287f5", "Португалия": "#42f563", "Нидерланды": "#42d4f5",
+    "Япония": "#e84393", "Испания": "#f5d142", "США": "#ff99cc",
+    "Империя Цин": "#fdcb6e", "Китайская Республика": "#d35400",
+    "Пакистан": "#00cec9", "Индонезия": "#fab1a0", "Малайзия": "#ffeaa7",
+    "Никогда не была колонизирована": "#ffffff"
+};
+
+const subregionColors = {
+    "Юго-Западная Азия": "#fAD390", "Центральная Азия": "#f8c291",
+    "Южная Азия": "#82ccdd", "Юго-Восточная Азия": "#b8e994", 
+    "Восточная Азия": "#ff7979"
+};
+
+// Полная база данных по странам Азии
+const countryData = {
+    // Юго-Западная Азия
+    "AZE": { name: "Азербайджан", capital: "Баку", metro: ["Российская империя", "СССР"], metro_text: "Российская империя (до 1917), СССР (с 1920 по 1991)", year: "1991", subregion: "Юго-Западная Азия", lang: "Азербайджанский" },
+    "ARM": { name: "Армения", capital: "Ереван", metro: ["Российская империя", "СССР"], metro_text: "Российская империя (до 1917), СССР (с 1920 по 1991)", year: "1991", subregion: "Юго-Западная Азия", lang: "Армянский" },
+    "AFG": { name: "Афганистан", capital: "Кабул", metro: ["Великобритания"], metro_text: "Великобритания (до 1919)", year: "1919", subregion: "Юго-Западная Азия", lang: "Пушту, Дари (фарси)" },
+    "GEO": { name: "Грузия", capital: "Тбилиси", metro: ["Российская империя", "СССР"], metro_text: "Российская империя (до 1917), СССР (с 1921 по 1991)", year: "1991", subregion: "Юго-Западная Азия", lang: "Грузинский" },
+    "ISR": { name: "Израиль", capital: "Иерусалим", metro: ["Османская империя", "Великобритания"], metro_text: "Османская империя (до 1917), Великобритания (с 1920 по 1948)", year: "1948", subregion: "Юго-Западная Азия", lang: "Иврит" },
+    "JOR": { name: "Иордания", capital: "Амман", metro: ["Османская империя", "Великобритания"], metro_text: "Османская империя (до 1918), Великобритания (с 1921 по 1946)", year: "1946", subregion: "Юго-Западная Азия", lang: "Арабский" },
+    "IRQ": { name: "Ирак", capital: "Багдад", metro: ["Османская империя", "Великобритания"], metro_text: "Османская империя (до 1918), Великобритания (с 1920 по 1932)", year: "1932", subregion: "Юго-Западная Азия", lang: "Арабский, Курдский" },
+    "IRN": { name: "Иран", capital: "Тегеран", metro: ["Никогда не была колонизирована"], metro_text: "-", year: "Не была колонией", subregion: "Юго-Западная Азия", lang: "Персидский (фарси)" },
+    "YEM": { name: "Йемен", capital: "Сана", metro: ["Османская империя", "Великобритания"], metro_text: "Османская империя (до 1918), Великобритания (с 1839 по 1967)", year: "1918 (Север), 1967 (Юг)", subregion: "Юго-Западная Азия", lang: "Арабский" },
+    "QAT": { name: "Катар", capital: "Доха", metro: ["Османская империя", "Великобритания"], metro_text: "Османская империя (до 1915), Великобритания (с 1916 по 1971)", year: "1971", subregion: "Юго-Западная Азия", lang: "Арабский" },
+    "KWT": { name: "Кувейт", capital: "Эль-Кувейт", metro: ["Османская империя", "Великобритания"], metro_text: "Османская империя (до 1899), Великобритания (с 1899 по 1961)", year: "1961", subregion: "Юго-Западная Азия", lang: "Арабский" },
+    "LBN": { name: "Ливан", capital: "Бейрут", metro: ["Османская империя", "Франция"], metro_text: "Османская империя (до 1918), Франция (с 1920 по 1943)", year: "1943", subregion: "Юго-Западная Азия", lang: "Арабский" },
+    "PSE": { name: "Палестинская автономия", capital: "Рамалла", metro: ["Османская империя", "Великобритания"], metro_text: "Османская империя (до 1917), Великобритания (с 1920 по 1948)", year: "1988", subregion: "Юго-Западная Азия", lang: "Арабский" },
+    "ARE": { name: "ОАЭ", capital: "Абу-Даби", metro: ["Великобритания"], metro_text: "Великобритания (до 1971)", year: "1971", subregion: "Юго-Западная Азия", lang: "Арабский" },
+    "OMN": { name: "Оман", capital: "Маскат", metro: ["Португалия"], metro_text: "Португалия (до 1650)", year: "1650", subregion: "Юго-Западная Азия", lang: "Арабский" },
+    "SAU": { name: "Саудовская Аравия", capital: "Эр-Рияд", metro: ["Никогда не была колонизирована"], metro_text: "Османская империя (до 1914)", year: "Не была колонией", subregion: "Юго-Западная Азия", lang: "Арабский" },
+    "SYR": { name: "Сирия", capital: "Дамаск", metro: ["Османская империя", "Франция"], metro_text: "Османская империя (до 1918), Франция (с 1920 по 1946)", year: "1946", subregion: "Юго-Западная Азия", lang: "Арабский" },
+    "TUR": { name: "Турция", capital: "Анкара", metro: ["Никогда не была колонизирована"], metro_text: "Османская империя (до 1922)", year: "Не была колонией", subregion: "Юго-Западная Азия", lang: "Турецкий" },
+
+    // Центральная Азия
+    "KAZ": { name: "Казахстан", capital: "Астана", metro: ["Российская империя", "СССР"], metro_text: "Российская империя (до 1917), СССР (с 1920 по 1991)", year: "1991", subregion: "Центральная Азия", lang: "Казахский, Русский" },
+    "KGZ": { name: "Киргизия", capital: "Бишкек", metro: ["Российская империя", "СССР"], metro_text: "Российская империя (до 1917), СССР (с 1922 по 1991)", year: "1991", subregion: "Центральная Азия", lang: "Киргизский, Русский" },
+    "TJK": { name: "Таджикистан", capital: "Душанбе", metro: ["Российская империя", "СССР"], metro_text: "Российская империя (до 1917), СССР (с 1924 по 1991)", year: "1991", subregion: "Центральная Азия", lang: "Таджикский" },
+    "TKM": { name: "Туркмения", capital: "Ашхабад", metro: ["Российская империя", "СССР"], metro_text: "Российская империя (до 1917), СССР (с 1924 по 1991)", year: "1991", subregion: "Центральная Азия", lang: "Туркменский" },
+    "UZB": { name: "Узбекистан", capital: "Ташкент", metro: ["Российская империя", "СССР"], metro_text: "Российская империя (до 1917), СССР (с 1924 по 1991)", year: "1991", subregion: "Центральная Азия", lang: "Узбекский" },
+
+    // Южная Азия
+    "BGD": { name: "Бангладеш", capital: "Дакка", metro: ["Великобритания", "Пакистан"], metro_text: "Великобритания (до 1947), Пакистан (с 1947 по 1971)", year: "1971", subregion: "Южная Азия", lang: "Бенгальский" },
+    "BTN": { name: "Бутан", capital: "Тхимпху", metro: ["Никогда не была колонизирована"], metro_text: "Нет (под протекторатом Великобритании до 1947)", year: "Не была колонией", subregion: "Южная Азия", lang: "Дзонг-кэ" },
+    "IND": { name: "Индия", capital: "Нью-Дели", metro: ["Великобритания"], metro_text: "Великобритания (до 1947)", year: "1947", subregion: "Южная Азия", lang: "Хинди, Английский" },
+    "NPL": { name: "Непал", capital: "Катманду", metro: ["Никогда не была колонизирована"], metro_text: "Нет (сфера влияния Великобритании до 1923)", year: "Не была колонией", subregion: "Южная Азия", lang: "Непальский" },
+    "PAK": { name: "Пакистан", capital: "Исламабад", metro: ["Великобритания"], metro_text: "Великобритания (до 1947)", year: "1947", subregion: "Южная Азия", lang: "Урду, Английский" },
+    "LKA": { name: "Шри-Ланка", capital: "Коломбо", metro: ["Португалия", "Нидерланды", "Великобритания"], metro_text: "Португалия (до 1658), Нидерланды (с 1658 по 1796), Великобритания (с 1796 по 1948)", year: "1948", subregion: "Южная Азия", lang: "Сингальский, Тамильский" },
+
+    // Юго-Восточная Азия
+    "BRN": { name: "Бруней", capital: "Бандар-Сери-Бегаван", metro: ["Великобритания"], metro_text: "Великобритания (до 1984)", year: "1984", subregion: "Юго-Восточная Азия", lang: "Малайский" },
+    "TLS": { name: "Восточный Тимор", capital: "Дили", metro: ["Португалия", "Индонезия"], metro_text: "Португалия (до 1975), Индонезия (с 1975 по 1999)", year: "2002", subregion: "Юго-Восточная Азия", lang: "Тетум, Португальский" },
+    "VNM": { name: "Вьетнам", capital: "Ханой", metro: ["Франция", "Япония"], metro_text: "Франция (до 1940), Япония (с 1940 по 1945), Франция (с 1945 по 1954)", year: "1945 (1954)", subregion: "Юго-Восточная Азия", lang: "Вьетнамский" },
+    "IDN": { name: "Индонезия", capital: "Джакарта", metro: ["Нидерланды", "Япония"], metro_text: "Нидерланды (до 1942), Япония (с 1942 по 1945), Нидерланды (с 1945 по 1949)", year: "1945 (1949)", subregion: "Юго-Восточная Азия", lang: "Индонезийский" },
+    "KHM": { name: "Камбоджа", capital: "Пномпень", metro: ["Франция", "Япония"], metro_text: "Франция (до 1940), Япония (с 1940 по 1945), Франция (с 1945 по 1953)", year: "1953", subregion: "Юго-Восточная Азия", lang: "Кхмерский" },
+    "LAO": { name: "Лаос", capital: "Вьентьян", metro: ["Франция", "Япония"], metro_text: "Франция (до 1940), Япония (с 1940 по 1945), Франция (с 1945 по 1953)", year: "1953", subregion: "Юго-Восточная Азия", lang: "Лаосский" },
+    "MYS": { name: "Малайзия", capital: "Куала-Лумпур", metro: ["Португалия", "Нидерланды", "Великобритания", "Япония"], metro_text: "Португалия (до 1641), Нидерланды (с 1641 по 1825), Великобритания (с 1825 по 1942), Япония (с 1942 по 1945), Великобритания (с 1945 по 1957)", year: "1957", subregion: "Юго-Восточная Азия", lang: "Малайский" },
+    "MMR": { name: "Мьянма", capital: "Нейпьидо", metro: ["Великобритания", "Япония"], metro_text: "Великобритания (до 1942), Япония (с 1942 по 1945), Великобритания (с 1945 по 1948)", year: "1948", subregion: "Юго-Восточная Азия", lang: "Бирманский" },
+    "THA": { name: "Таиланд", capital: "Бангкок", metro: ["Никогда не была колонизирована"], metro_text: "Нет", year: "Не была колонией", subregion: "Юго-Восточная Азия", lang: "Тайский" },
+    "PHL": { name: "Филиппины", capital: "Манила", metro: ["Испания", "США", "Япония"], metro_text: "Испания (до 1898), США (с 1898 по 1942), Япония (с 1942 по 1945), США (с 1945 по 1946)", year: "1946", subregion: "Юго-Восточная Азия", lang: "Тагальский (филиппинский), Английский" },
+
+    // Восточная Азия
+    "CHN": { name: "Китай (КНР)", capital: "Пекин", metro: ["Никогда не была колонизирована"], metro_text: "Нет", year: "Не была колонией", subregion: "Восточная Азия", lang: "Китайский (путунхуа)" },
+    "PRK": { name: "КНДР (Северная Корея)", capital: "Пхеньян", metro: ["Япония", "СССР"], metro_text: "Япония (до 1945), СССР (с 1945 по 1948 - оккупация)", year: "1948", subregion: "Восточная Азия", lang: "Корейский" },
+    "MNG": { name: "Монголия", capital: "Улан-Батор", metro: ["Империя Цин", "Китайская Республика"], metro_text: "Империя Цин (до 1911), Китайская Республика (с 1919 по 1921)", year: "1921", subregion: "Восточная Азия", lang: "Монгольский" },
+    "TWN": { name: "Тайвань", capital: "Тайбэй", metro: ["Нидерланды", "Империя Цин", "Япония"], metro_text: "Нидерланды (до 1662), Империя Цин (с 1683 по 1895), Япония (с 1895 по 1945)", year: "1949", subregion: "Восточная Азия", lang: "Китайский (гоюй)" },
+    "KOR": { name: "Южная Корея", capital: "Сеул", metro: ["Япония", "США"], metro_text: "Япония (до 1945), США (с 1945 по 1948 - оккупация)", year: "1948", subregion: "Восточная Азия", lang: "Корейский" },
+    "JPN": { name: "Япония", capital: "Токио", metro: ["Никогда не была колонизирована"], metro_text: "Нет (оккупация США с 1945 по 1952)", year: "Не была колонией", subregion: "Восточная Азия", lang: "Японский" }
+};
+
+const islandNations = [
+    { id: "BHR", coords: [50.55, 26.06], info: { name: "Бахрейн", capital: "Манама", metro: ["Великобритания"], metro_text: "Великобритания (до 1971)", year: "1971", subregion: "Юго-Западная Азия", lang: "Арабский" } },
+    { id: "CYP", coords: [33.4, 35.1], info: { name: "Кипр", capital: "Никосия", metro: ["Османская империя", "Великобритания"], metro_text: "Османская империя (до 1878), Великобритания (с 1878 по 1960)", year: "1960", subregion: "Юго-Западная Азия", lang: "Греческий, Турецкий" } },
+    { id: "MDV", coords: [73.5, 4.1], info: { name: "Мальдивские Острова", capital: "Мале", metro: ["Великобритания"], metro_text: "Великобритания (до 1965)", year: "1965", subregion: "Южная Азия", lang: "Дивехи" } },
+    { id: "SGP", coords: [103.8, 1.35], info: { name: "Сингапур", capital: "Сингапур", metro: ["Великобритания", "Япония", "Малайзия"], metro_text: "Великобритания (до 1942), Япония (с 1942 по 1945), Великобритания (с 1945 по 1963), Малайзия (с 1963 по 1965)", year: "1965", subregion: "Юго-Восточная Азия", lang: "Английский, Малайский, Китайский, Тамильский" } },
+    { id: "MAC", coords: [113.5, 22.2], info: { name: "Аомынь (Макао)", capital: "Макао", metro: ["Португалия"], metro_text: "Португалия (до 1999)", year: "Завис.", subregion: "Восточная Азия", lang: "Китайский, Португальский" } },
+    { id: "HKG", coords: [114.1, 22.3], info: { name: "Сянган (Гонконг)", capital: "Гонконг", metro: ["Великобритания"], metro_text: "Великобритания (до 1997)", year: "Завис.", subregion: "Восточная Азия", lang: "Китайский, Английский" } }
+];
+
+let currentMode = "independence";
+
+// --- ЛОГИКА ЛЕГЕНДЫ И КНОПОК ---
+const legendHeader = document.getElementById('legend-header');
+const legendEl = document.getElementById('legend');
+const modeBtns = document.querySelectorAll('.mode-btn');
+
+modeBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        modeBtns.forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        currentMode = e.target.dataset.mode;
+        updateMapVisuals();
+    });
+});
+
+let isDragging = false; let isMoved = false; let startX, startY, initialLeft, initialTop;
+
+legendHeader.addEventListener("pointerdown", (e) => {
+    if (window.innerWidth <= 600) return; 
+    isDragging = true; isMoved = false; 
+    startX = e.clientX; startY = e.clientY;
+    const rect = legendEl.getBoundingClientRect();
+    legendEl.style.bottom = "auto"; legendEl.style.right = "auto";
+    initialLeft = rect.left; initialTop = rect.top;
+    legendEl.style.left = initialLeft + "px"; legendEl.style.top = initialTop + "px";
+    legendHeader.setPointerCapture(e.pointerId);
+});
+
+legendHeader.addEventListener("pointermove", (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX; const dy = e.clientY - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isMoved = true;
+    if (isMoved) {
+        let newX = Math.max(0, Math.min(window.innerWidth - legendEl.offsetWidth, initialLeft + dx));
+        let newY = Math.max(document.getElementById('top-nav').offsetHeight, Math.min(window.innerHeight - legendEl.offsetHeight, initialTop + dy));
+        legendEl.style.left = newX + "px"; legendEl.style.top = newY + "px";
+    }
+});
+
+legendHeader.addEventListener("pointerup", (e) => {
+    if (window.innerWidth > 600) {
+        isDragging = false; legendHeader.releasePointerCapture(e.pointerId);
+        if (!isMoved) legendEl.classList.toggle('collapsed');
+    }
+});
+
+legendHeader.addEventListener('click', () => { if(window.innerWidth <= 600) legendEl.classList.toggle('collapsed'); });
+
+function updateLegend() {
+    const container = d3.select("#legend-items");
+    container.html("");
+    if (currentMode === "independence") {
+        Object.entries(metropoleColors).forEach(([metro, color]) => {
+            const item = container.append("div").attr("class", "legend-item");
+            item.append("div").attr("class", "legend-color").style("background-color", color);
+            item.append("div").text(metro);
+        });
+        const mixedItem = container.append("div").attr("class", "legend-item").style("margin-top", "8px");
+        mixedItem.append("div").attr("class", "legend-pattern");
+        mixedItem.append("div").style("font-style", "italic").style("font-size", "11px").text("Штриховка: Несколько метрополий");
+    } else {
+        Object.entries(subregionColors).forEach(([region, color]) => {
+            const item = container.append("div").attr("class", "legend-item");
+            item.append("div").attr("class", "legend-color").style("background-color", color);
+            item.append("div").text(region);
+        });
+    }
+}
+
+// --- D3.js КАРТА ---
+const svg = d3.select("#map-container");
+const defs = svg.append("defs");
+const mapGroup = svg.append("g"); 
+const projection = d3.geoMercator();
+const path = d3.geoPath().projection(projection);
+const tooltip = d3.select("#tooltip");
+
+const zoom = d3.zoom().scaleExtent([0.5, 15]).on("zoom", function(event) {
+    const k = event.transform.k;
+    mapGroup.attr("transform", event.transform);
+    mapGroup.selectAll(".country").style("stroke-width", 0.5 / k + "px");
+    
+    mapGroup.selectAll(".island-marker")
+        .attr("r", 3 / Math.max(1, k * 0.4))
+        .style("stroke-width", 0.8 / k + "px");
+
+    mapGroup.selectAll(".island-label")
+        .style("font-size", (8 / Math.max(1, k * 0.5)) + "px")
+        .style("opacity", k > 3.5 ? 1 : 0);
+
+    mapGroup.selectAll(".map-label")
+        .style("font-size", (9 / Math.max(1, k * 0.4)) + "px");
+
+    hideTooltip();
+});
+svg.call(zoom);
+
+function resizeMap() {
+    const navHeight = document.getElementById('top-nav').offsetHeight;
+    const w = window.innerWidth; const h = window.innerHeight - navHeight;
+    svg.attr("width", w).attr("height", h);
+    zoom.translateExtent([[-w, -h], [w * 2, h * 2]]); 
+}
+window.addEventListener('resize', resizeMap);
+resizeMap();
+
+function getIndependenceColor(dataObj, id) {
+    const metros = dataObj.metro;
+    if (metros.length === 1) return metropoleColors[metros[0]] || "#ececec";
+    const patternId = "pattern-" + id;
+    if (defs.select(`#${patternId}`).empty()) {
+        const pattern = defs.append("pattern").attr("id", patternId).attr("patternUnits", "userSpaceOnUse").attr("width", metros.length * 6).attr("height", metros.length * 6).attr("patternTransform", "rotate(45)");
+        metros.forEach((metro, index) => { pattern.append("rect").attr("x", index * 6).attr("y", 0).attr("width", 6).attr("height", metros.length * 6).attr("fill", metropoleColors[metro] || "#ececec"); });
+    }
+    return `url(#pattern-${id})`;
+}
+
+function getFillStyle(dataObj, id) {
+    if (currentMode === "quiz") return (quizPhase === 'result' || (quizPhase === 'answer' && id === currentTargetId)) ? getIndependenceColor(dataObj, id) : "#ececec";
+    if (currentMode === "subregions") return subregionColors[dataObj.subregion] || "#ececec";
+    return getIndependenceColor(dataObj, id);
+}
+
+function showTooltip(event, info) {
+    if (currentMode === "quiz") return; 
+    tooltip.transition().duration(200).style("opacity", 1);
+    
+    let xPos = event.pageX + 15; 
+    let yPos = event.pageY - 28;
+    if (xPos + 290 > window.innerWidth) xPos = window.innerWidth - 300;
+    
+    let tooltipHtml = `<div class="tooltip-title">${info.name}</div><div class="tooltip-row"><b>Субрегион:</b> ${info.subregion}</div>`;
+    if (currentMode === "independence") {
+        tooltipHtml += `<div class="tooltip-row"><b>Год независимости:</b> ${info.year}</div>
+                        <div class="tooltip-row"><b>Метрополии:</b> ${info.metro_text}</div>`;
+    } else {
+        tooltipHtml += `<div class="tooltip-row"><b>Столица (Адм. центр):</b> ${info.capital}</div>`;
+    }
+    tooltipHtml += `<div class="tooltip-row"><b>Оф. языки:</b> ${info.lang}</div>`;
+    
+    tooltip.html(tooltipHtml).style("left", Math.max(10, xPos) + "px").style("top", Math.max(10, yPos) + "px");
+}
+
+function hideTooltip() { tooltip.transition().duration(200).style("opacity", 0); }
+svg.on("click", hideTooltip); 
+
+function resolveGeoId(d) {
+    const prop = d.properties || {};
+    const idCandidates = [d.id, prop.ADM0_A3, prop.ISO_A3, prop.GU_A3, prop.SU_A3];
+    for (let id of idCandidates) {
+        if (!id || id === "-99") continue;
+        if (countryData[id]) return id;
+        if (id === "CYN") return "CYP"; // Привязка Северного Кипра к Кипру
+        if (id === "PSX") return "PSE"; // Палестина
+    }
+    const name = prop.NAME || prop.ADMIN || prop.name;
+    if (name === "Taiwan") return "TWN";
+    return null;
+}
+
+let geojsonData = [];
+
+function updateMapVisuals() {
+    updateLegend();
+    mapGroup.selectAll(".country").attr("fill", d => {
+        const geoId = resolveGeoId(d);
+        return countryData[geoId] ? getFillStyle(countryData[geoId], geoId) : "#ececec";
+    }).style("stroke-width", d => (currentMode === 'quiz' && resolveGeoId(d) === currentTargetId && quizPhase !== 'find') ? "2px" : "0.5px")
+      .style("stroke", d => (currentMode === 'quiz' && resolveGeoId(d) === currentTargetId && quizPhase !== 'find') ? "#e74c3c" : "#333");
+
+    mapGroup.selectAll(".island-marker").attr("fill", d => getFillStyle(d.info, d.id));
+    
+    mapGroup.selectAll(".map-label").text(d => {
+        if (currentMode === "quiz") return "";
+        const geoId = resolveGeoId(d);
+        if (!countryData[geoId]) return "";
+        return currentMode === "independence" ? countryData[geoId].year.split(' ')[0] : "";
+    });
+    mapGroup.selectAll(".island-label").text(d => (currentMode === "independence" && currentMode !== "quiz") ? d.info.year.split(' ')[0] : "");
+}
+
+// --- ЛОГИКА ТЕСТИРОВАНИЯ (QUIZ) ---
+let quizCountriesList = [];
+let currentQuizIndex = 0;
+let quizPhase = "off";
+let currentQuizTargetId = null;
+let selectedMetros = {};
+
+const quizPanel = document.getElementById('quiz-panel');
+const metroSelect = document.getElementById('quiz-metro-select');
+
+Object.keys(metropoleColors).forEach(metro => {
+    let opt = document.createElement('option');
+    opt.value = metro; opt.textContent = metro;
+    metroSelect.appendChild(opt);
+});
+
+metroSelect.addEventListener('change', function() {
+    const val = this.value;
+    if (val && !selectedMetros[val]) { selectedMetros[val] = ""; renderSelectedMetros(); }
+    this.value = ""; 
+});
+
+function renderSelectedMetros() {
+    const container = document.getElementById('quiz-selected-metros');
+    container.innerHTML = "";
+    Object.keys(selectedMetros).forEach(metro => {
+        const row = document.createElement('div');
+        row.className = "quiz-metro-item";
+        row.innerHTML = `<span>${metro}</span><div><span style="font-size: 11px;">до: </span>
+                <input type="text" class="quiz-metro-year" data-metro="${metro}" placeholder="Год" value="${selectedMetros[metro]}">
+                <button class="quiz-remove-btn" onclick="removeMetro('${metro}')">×</button></div>`;
+        container.appendChild(row);
+    });
+    document.querySelectorAll('.quiz-metro-year').forEach(input => {
+        input.addEventListener('input', (e) => { selectedMetros[e.target.dataset.metro] = e.target.value; });
+    });
+}
+
+window.removeMetro = function(metro) { delete selectedMetros[metro]; renderSelectedMetros(); }
+
+function startQuiz() {
+    const allIds = [...Object.keys(countryData), ...islandNations.map(i => i.id)];
+    quizCountriesList = allIds.sort(() => Math.random() - 0.5); 
+    currentQuizIndex = 0;
+    legendEl.style.display = 'none';
+    quizPanel.style.display = 'block';
+    nextQuizQuestion();
+}
+
+function getCountryNameById(id) {
+    if (countryData[id]) return countryData[id].name;
+    let island = islandNations.find(i => i.id === id);
+    if (island) return island.info.name;
+    return "";
+}
+
+function nextQuizQuestion() {
+    if (currentQuizIndex >= quizCountriesList.length) {
+        document.getElementById('quiz-find-section').innerHTML = "<div class='quiz-title'>Тест завершен! Вы прошли все территории.</div>";
+        document.getElementById('quiz-answer-section').style.display = 'none';
+        return;
+    }
+    currentTargetId = quizCountriesList[currentQuizIndex];
+    quizPhase = 'find'; selectedMetros = {};
+    document.getElementById('quiz-target-name').textContent = getCountryNameById(currentTargetId);
+    document.getElementById('quiz-error-msg').textContent = "";
+    document.getElementById('quiz-find-section').style.display = 'block';
+    document.getElementById('quiz-answer-section').style.display = 'none';
+    document.getElementById('quiz-result').style.display = 'none';
+    document.getElementById('quiz-next-btn').style.display = 'none';
+    document.getElementById('quiz-check-btn').style.display = 'block';
+    document.getElementById('quiz-year-input').value = "";
+    renderSelectedMetros(); updateMapVisuals();
+}
+
+function handleQuizMapClick(geoId) {
+    if (quizPhase !== 'find') return;
+    if (geoId === currentTargetId) {
+        quizPhase = 'answer';
+        document.getElementById('quiz-find-section').style.display = 'none';
+        document.getElementById('quiz-active-name').textContent = getCountryNameById(currentTargetId);
+        document.getElementById('quiz-answer-section').style.display = 'block';
+        updateMapVisuals(); 
+    } else {
+        const clickedName = getCountryNameById(geoId) || "Неизвестная территория";
+        document.getElementById('quiz-error-msg').textContent = `Неверно! Это ${clickedName}. Ищите ${getCountryNameById(currentTargetId)}!`;
+    }
+}
+
+document.getElementById('quiz-check-btn').addEventListener('click', () => {
+    const targetData = countryData[currentTargetId] || islandNations.find(i => i.id === currentTargetId).info;
+    const inputYear = document.getElementById('quiz-year-input').value.trim();
+    let errors = [];
+    
+    if (!targetData.year.includes(inputYear) || inputYear === "") {
+        errors.push(`<b>Год независимости:</b> неверно. Правильно: ${targetData.year}`);
+    }
+    
+    const targetMetros = targetData.metro;
+    const selectedMetroKeys = Object.keys(selectedMetros);
+    let missingMetros = targetMetros.filter(m => !selectedMetroKeys.includes(m));
+    let extraMetros = selectedMetroKeys.filter(m => !targetMetros.includes(m));
+    
+    if (missingMetros.length > 0) errors.push(`<b>Пропущены:</b> ${missingMetros.join(', ')}`);
+    if (extraMetros.length > 0) errors.push(`<b>Лишние:</b> ${extraMetros.join(', ')}`);
+    
+    selectedMetroKeys.forEach(m => {
+        if (targetMetros.includes(m)) {
+            const inputDate = selectedMetros[m].trim();
+            if (inputDate !== "" && !targetData.metro_text.includes(inputDate)) {
+                 errors.push(`<b>Дата для ${m}:</b> неверно.`);
+            } else if (inputDate === "") errors.push(`<b>Укажите дату для ${m}</b>`);
+        }
+    });
+
+    const resultBox = document.getElementById('quiz-result');
+    resultBox.style.display = 'block';
+    if (errors.length === 0) {
+        resultBox.className = "quiz-result-box correct";
+        resultBox.innerHTML = `<strong>Идеально!</strong><br>Полная справка: ${targetData.metro_text}`;
+    } else {
+        resultBox.className = "quiz-result-box incorrect";
+        resultBox.innerHTML = `<strong>Есть ошибки:</strong><br>${errors.join('<br>')}<br><br><em>Справка: ${targetData.metro_text}</em>`;
+    }
+    
+    document.getElementById('quiz-check-btn').style.display = 'none';
+    document.getElementById('quiz-next-btn').style.display = 'block';
+    quizPhase = 'result'; updateMapVisuals(); 
+});
+
+document.getElementById('quiz-next-btn').addEventListener('click', () => { currentQuizIndex++; nextQuizQuestion(); });
+
+// 100% НАДЕЖНАЯ ЗАГРУЗКА КАРТЫ
+const localUrl = "ne_110m_admin_0_countries.geojson";
+const cdnUrl = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
+
+d3.json(localUrl).catch(() => d3.json(cdnUrl)).then(world => {
+    geojsonData = world.features.filter(d => resolveGeoId(d) !== null);
+    
+    // Центрируем карту на Азию
+    projection.fitExtent([[30, 30], [window.innerWidth - 30, window.innerHeight - document.getElementById('top-nav').offsetHeight - 30]], {type: "FeatureCollection", features: geojsonData});
+
+    mapGroup.selectAll("path").data(geojsonData).enter().append("path").attr("d", path).attr("class", "country")
+        .on("click", (event, d) => { 
+            event.stopPropagation(); 
+            const geoId = resolveGeoId(d);
+            if (!geoId || !countryData[geoId]) return;
+            if (currentMode === 'quiz') handleQuizMapClick(geoId); else showTooltip(event, countryData[geoId]); 
+        });
+
+    mapGroup.selectAll(".map-label").data(geojsonData).enter().append("text").attr("class", "map-label").attr("transform", d => {
+            const centroid = path.centroid(d);
+            return (!isNaN(centroid[0]) && !isNaN(centroid[1])) ? `translate(${centroid[0]}, ${centroid[1]})` : "translate(-1000,-1000)"; 
+        });
+
+    const islands = mapGroup.selectAll(".island-group").data(islandNations).enter().append("g")
+        .attr("transform", d => `translate(${projection(d.coords)[0]}, ${projection(d.coords)[1]})`);
+
+    islands.append("circle").attr("class", "island-marker").attr("r", 3)
+        .on("click", (event, d) => { 
+            event.stopPropagation(); 
+            if (currentMode === 'quiz') handleQuizMapClick(d.id); else showTooltip(event, d.info); 
+        });
+
+    islands.append("text").attr("class", "island-label").attr("dx", 6).attr("dy", 2);
+    updateMapVisuals();
+}).catch(error => {
+    alert("Критическая ошибка загрузки карты.");
+});
+</script>
+</body>
+</html>
